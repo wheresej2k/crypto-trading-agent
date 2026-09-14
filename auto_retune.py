@@ -41,14 +41,14 @@ def main():
         print("No combination passed the safety filter this month - leaving config/params.json unchanged.")
         write_summary(
             "## Monthly retune: no proposal\n\n"
-            "No parameter combination passed the safety filter (never net-unprofitable, "
+            "No parameter combination passed the safety filter (beats buy-and-hold, "
             "drawdown/win-rate bar from tune.py) against this month's fresh data. "
             "config/params.json was left unchanged.\n"
         )
         return
 
     best = safe_results[0]
-    sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates = best
+    sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold = best
     proposed = dict(current_params)
     proposed.update({
         "short_sma_window": sw, "long_sma_window": lw,
@@ -90,16 +90,16 @@ def main():
         lines.append(f"| {label} | {current_params.get(k)} | {proposed[k]} |\n")
 
     lines.append("\n### Backtest results for the proposed combination\n\n")
-    lines.append("| Window | Return | Max drawdown | Win rate |\n|---|---|---|---|\n")
+    lines.append("| Window | Return | Buy & hold | Max drawdown | Win rate |\n|---|---|---|---|---|\n")
     for label, _ in WINDOWS_TO_TEST:
         lines.append(
-            f"| {label} | {window_returns[label]:+.2f}% | {window_drawdowns[label]:.2f}% | "
-            f"{window_winrates[label]:.1f}% |\n"
+            f"| {label} | {window_returns[label]:+.2f}% | {window_buyhold[label]:+.2f}% | "
+            f"{window_drawdowns[label]:.2f}% | {window_winrates[label]:.1f}% |\n"
         )
     lines.append(
-        "\n**Safety filter (held in every window above):** never net-unprofitable, drawdown "
-        "never worse than the configured limit, win rate never below the configured minimum - "
-        "both set in tune.py.\n\n"
+        "\n**Safety filter (held in every window above):** never underperformed simple "
+        "buy-and-hold on the same coins, drawdown never worse than the configured limit, win "
+        "rate never below the configured minimum - all set in tune.py.\n\n"
         "Review these numbers before merging - a good backtest is a hypothesis worth trying on "
         "paper, not a guarantee. Position size, total exposure, and daily-loss limits are never "
         "touched by this process - only you change those, directly in config/params.json.\n"

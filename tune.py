@@ -12,11 +12,21 @@ for crypto, which starts 2021-01-01) - a combination only counts as "safe" if it
 of them, not just one.
 
 "Safe" here specifically means, across every tested window:
-  - it was never net-unprofitable (return >= 0%)
+  - it never did WORSE than simple buy-and-hold on the same coins over the same period
   - its worst drawdown never exceeded SAFE_MAX_DRAWDOWN_PCT
   - its win rate never fell below MIN_WIN_RATE_PCT
-These three numbers ARE this project's quantified "what does working mean" bar from the README -
-change them here to make the bar stricter or looser.
+These numbers ARE this project's quantified "what does working mean" bar from the README - change
+them here to make the bar stricter or looser.
+
+Why "beats buy-and-hold" instead of "never net-unprofitable" (revised 2026-09-14): the original
+bar required a positive return in every window, including the trailing ~1-year window - but that
+window covers a real, severe crypto-wide crash (simple buy-and-hold on this watchlist lost 31% to
+70% over that year). No long-only strategy (this bot never shorts) can guarantee a positive return
+while the underlying assets themselves collapse that hard - demanding "always profitable" was
+effectively demanding immunity to a bear market, not testing whether the strategy adds value. The
+honest question is whether the bot's risk management (stop-losses, position sizing) meaningfully
+softens a crash compared to just holding - i.e. does it beat the do-nothing alternative - not
+whether it can defy gravity. Confirmed with the user before changing this.
 
 Deliberate design choice: this sweep only touches STRATEGY parameters (the SMA windows,
 stop-loss/take-profit, confidence threshold) - it never touches max_position_pct,
@@ -42,12 +52,8 @@ STOP_LOSS_PCTS = [6, 10, 15]
 TAKE_PROFIT_PCTS = [10, 18, 25]
 MIN_CONFIDENCES = [40, 55]
 
-# The safety bar - a combination must never have lost money, never drawn down worse than this,
-# and never had a win rate below this, in ANY of the three windows tested, to count at all.
-# Adjusted 2026-09-14 from an initial guess (-22%/40%) to numbers grounded in what the real
-# ~5-year sweep actually showed was achievable - nothing survived the 2022 crash under the
-# original bar. The user explicitly approved this loosening after seeing the near-miss data
-# (see tune.py's diagnose() output) - this is not an automated change.
+# The safety bar - a combination must never underperform buy-and-hold, never drawn down worse
+# than this, and never had a win rate below this, in ANY of the three windows tested, to count.
 SAFE_MAX_DRAWDOWN_PCT = -32.0
 MIN_WIN_RATE_PCT = 35.0
 
@@ -68,8 +74,8 @@ def build_combos():
 
 def sweep(base_settings, data_client, bars_by_symbol=None):
     """Runs every combo across every test window. Returns one row per combo: params plus
-    per-window return/drawdown/win-rate. `bars_by_symbol` can be passed in pre-fetched (the
-    monthly auto-retune workflow does this to fetch history exactly once).
+    per-window return/drawdown/win-rate/buy-hold-return. `bars_by_symbol` can be passed in
+    pre-fetched (the monthly auto-retune workflow does this to fetch history exactly once).
     """
     max_hours = max(hours for _, hours in WINDOWS_TO_TEST)
     if bars_by_symbol is None:
@@ -87,35 +93,39 @@ def sweep(base_settings, data_client, bars_by_symbol=None):
             short_sma_window=sw, long_sma_window=lw,
             stop_loss_pct=sl, take_profit_pct=tp, min_confidence=mc,
         )
-        window_returns, window_drawdowns, window_winrates = {}, {}, {}
+        window_returns, window_drawdowns, window_winrates, window_buyhold = {}, {}, {}, {}
         for label, hours in WINDOWS_TO_TEST:
             trimmed_bars = {s: bars[-hours:] for s, bars in bars_by_symbol.items()}
             r = simulate(settings, trimmed_bars)
             window_returns[label] = r["total_return_pct"] if r else None
             window_drawdowns[label] = r["max_drawdown_pct"] if r else None
             window_winrates[label] = r["win_rate_pct"] if r else None
+            window_buyhold[label] = r["buy_hold_return_pct"] if r else None
 
-        results.append((sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates))
+        results.append((sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold))
 
     return results
 
 
 def is_safe(row):
-    window_returns, window_drawdowns, window_winrates = row[-3], row[-2], row[-1]
-    returns = [v for v in window_returns.values() if v is not None]
+    window_returns, window_drawdowns, window_winrates, window_buyhold = row[-4], row[-3], row[-2], row[-1]
     drawdowns = [v for v in window_drawdowns.values() if v is not None]
     winrates = list(window_winrates.values())
-    if len(returns) < len(WINDOWS_TO_TEST):
+    buyholds = [window_buyhold[label] for label in window_returns]
+
+    if len(drawdowns) < len(WINDOWS_TO_TEST) or any(v is None for v in buyholds):
         return False
     if any(v is None for v in winrates):
         # A window with zero completed round-trip trades has no meaningful win rate - treat that
         # as insufficient evidence rather than letting it silently pass or fail the bar.
         return False
-    return min(returns) >= 0 and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT and min(winrates) >= MIN_WIN_RATE_PCT
+
+    beats_buy_hold = all(window_returns[label] >= window_buyhold[label] for label in window_returns)
+    return beats_buy_hold and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT and min(winrates) >= MIN_WIN_RATE_PCT
 
 
 def avg_return(row):
-    window_returns = row[-3]
+    window_returns = row[-4]
     values = [v for v in window_returns.values() if v is not None]
     return sum(values) / len(values) if values else -999
 
@@ -128,20 +138,21 @@ def rank_safe_combos(results):
 
 def diagnose(results):
     """When nothing passes the safety filter, a bare 'nothing passed' isn't enough to act on -
-    this reports which specific criterion is the bottleneck (profitability, drawdown, or win
-    rate) and shows the closest near-misses, so there's something to actually decide from instead
-    of just a dead end.
+    this reports which specific criterion is the bottleneck (beating buy-and-hold, drawdown, or
+    win rate) and shows the closest near-misses, so there's something to actually decide from
+    instead of just a dead end.
     """
-    profitable_count = 0
+    beats_buyhold_count = 0
     drawdown_ok_count = 0
     winrate_ok_count = 0
     for row in results:
-        window_returns, window_drawdowns, window_winrates = row[-3], row[-2], row[-1]
-        returns = [v for v in window_returns.values() if v is not None]
+        window_returns, window_drawdowns, window_winrates, window_buyhold = row[-4], row[-3], row[-2], row[-1]
         drawdowns = [v for v in window_drawdowns.values() if v is not None]
         winrates = [v for v in window_winrates.values() if v is not None]
-        if len(returns) == len(WINDOWS_TO_TEST) and min(returns) >= 0:
-            profitable_count += 1
+        buyholds = [window_buyhold[label] for label in window_returns]
+
+        if all(v is not None for v in buyholds) and all(window_returns[l] >= window_buyhold[l] for l in window_returns):
+            beats_buyhold_count += 1
         if drawdowns and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT:
             drawdown_ok_count += 1
         if len(winrates) == len(WINDOWS_TO_TEST) and all(v is not None for v in winrates) and min(winrates) >= MIN_WIN_RATE_PCT:
@@ -149,7 +160,7 @@ def diagnose(results):
 
     total = len(results)
     print(f"Of {total} combinations tested:")
-    print(f"  {profitable_count} were profitable in every window")
+    print(f"  {beats_buyhold_count} beat simple buy-and-hold in every window")
     print(f"  {drawdown_ok_count} stayed within the {SAFE_MAX_DRAWDOWN_PCT:.0f}% drawdown limit in every window")
     print(f"  {winrate_ok_count} met the {MIN_WIN_RATE_PCT:.0f}% win-rate floor in every window")
     print("(a combination needs all three to count as 'safe' - whichever count above is lowest is the actual bottleneck)\n")
@@ -157,15 +168,15 @@ def diagnose(results):
     print("Closest near-misses (best average return regardless of safety, for comparison):")
     header = (
         f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
-        + "  ".join(f"{label:>26}" for label, _ in WINDOWS_TO_TEST)
+        + "  ".join(f"{label:>32}" for label, _ in WINDOWS_TO_TEST)
     )
     print(header)
     by_return = sorted(results, key=avg_return, reverse=True)
-    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates in by_return[:10]:
+    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in by_return[:10]:
         row = "  ".join(
-            f"{window_returns[label]:+7.2f}% (dd {window_drawdowns[label]:5.2f}%, wr "
-            f"{window_winrates[label]:.1f}%)" if window_winrates[label] is not None else
-            f"{window_returns[label]:+7.2f}% (dd {window_drawdowns[label]:5.2f}%, wr  n/a)"
+            f"{window_returns[label]:+7.2f}% vs b&h {window_buyhold[label]:+6.1f}% "
+            f"(dd {window_drawdowns[label]:5.2f}%, wr "
+            + (f"{window_winrates[label]:.1f}%)" if window_winrates[label] is not None else "n/a)")
             for label, _ in WINDOWS_TO_TEST
         )
         print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
@@ -179,7 +190,7 @@ def main():
     safe_results = rank_safe_combos(results)
 
     print(f"{len(safe_results)} of {len(results)} combinations passed the safety filter "
-          f"(profitable in every window, drawdown no worse than {SAFE_MAX_DRAWDOWN_PCT:.0f}%, "
+          f"(beat buy-and-hold in every window, drawdown no worse than {SAFE_MAX_DRAWDOWN_PCT:.0f}%, "
           f"win rate at least {MIN_WIN_RATE_PCT:.0f}% in every window).\n")
 
     if not safe_results:
@@ -189,12 +200,13 @@ def main():
 
     header = (
         f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
-        + "  ".join(f"{label:>26}" for label, _ in WINDOWS_TO_TEST)
+        + "  ".join(f"{label:>32}" for label, _ in WINDOWS_TO_TEST)
     )
     print(header)
-    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates in safe_results[:15]:
+    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in safe_results[:15]:
         row = "  ".join(
-            f"{window_returns[label]:+7.2f}% (dd {window_drawdowns[label]:5.2f}%, wr {window_winrates[label]:4.1f}%)"
+            f"{window_returns[label]:+7.2f}% vs b&h {window_buyhold[label]:+6.1f}% "
+            f"(dd {window_drawdowns[label]:5.2f}%, wr {window_winrates[label]:4.1f}%)"
             for label, _ in WINDOWS_TO_TEST
         )
         print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
