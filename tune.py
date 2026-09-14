@@ -58,12 +58,12 @@ from alpaca.data.historical import CryptoHistoricalDataClient
 from backtest import fetch_all_bars, simulate
 from config import load_settings
 
-SHORT_WINDOWS = [4, 8, 12, 24]        # hours
-LONG_WINDOWS = [24, 48, 96, 168]      # hours (1 day, 2 days, 4 days, 1 week)
-STOP_LOSS_PCTS = [8, 12, 15, 18]
-TAKE_PROFIT_PCTS = [8, 12]            # narrowed after the first wide sweep - tp=8 dominated
-MIN_CONFIDENCES = [45, 60]            # narrowed after the first wide sweep - 30 rarely won
-TREND_WINDOWS = [168, 240, 360]       # hours (1 week, 10 days, 15 days) - the macro trend filter
+SHORT_WINDOWS = [3, 4, 6]             # hours - fine search centered on the current best (4)
+LONG_WINDOWS = [20, 24, 32]           # hours - centered on the current best (24)
+STOP_LOSS_PCTS = [12, 15, 18]         # centered on the current best (15)
+TAKE_PROFIT_PCTS = [6, 8, 10]         # centered on the current best (8)
+MIN_CONFIDENCES = [55, 60, 65]        # centered on the current best (60)
+TREND_WINDOWS = [300, 360, 420]       # hours - centered on the current best (360)
 
 # The safety bar - a combination must never drawn down worse than this, and never had a win rate
 # below this, in ANY of the three windows tested, to count as "safe". Return is not gated here -
