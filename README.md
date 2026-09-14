@@ -25,26 +25,28 @@ a set of strategy parameters must, when backtested across **three different hist
 (~3 months, ~1 year, and ~5 years - close to the full history Alpaca has for crypto, which starts
 2021-01-01):
 
-- **Never underperform simple buy-and-hold** on the same coins over the same period, in any window
 - **Never draw down more than 32%** from its peak equity in any window
 - **Never have a win rate below 35%** on completed round-trip trades in any window
+- Among whatever parameter combinations clear both of those, **pick whichever made the most
+  money on average** across the three windows
 
 This is exactly what `tune.py`'s safety filter enforces (see `is_safe()`, `SAFE_MAX_DRAWDOWN_PCT`
-and `MIN_WIN_RATE_PCT` at the top of that file) before it will even consider a parameter
-combination's profitability. These numbers were revised twice on 2026-09-14, both times after
-showing the user real backtest data and getting explicit sign-off, not silently:
+and `MIN_WIN_RATE_PCT` at the top of that file). These numbers were revised twice on 2026-09-14,
+both times after showing the user real backtest data and getting explicit sign-off, not silently:
 
 1. The drawdown/win-rate bar started at 22%/40% (guessed from the "moderate" risk tier chosen at
    setup) and turned out stricter than anything in a real 144-combination, 3-window sweep could
    clear - the ~5-year window includes crypto's 2022 crash. Loosened to 32%/35%, numbers grounded
    in what the sweep's actual near-misses showed was achievable, not another guess.
-2. The profitability bar originally required a positive return in *every* window, including
-   trailing ~1 year - but that year was a severe crypto-wide crash (simple buy-and-hold on this
-   watchlist lost 31-70% over it). No long-only strategy can guarantee positive returns while the
-   underlying assets collapse that hard, so "always profitable" was really demanding immunity to a
-   bear market. Replaced with "never underperforms buy-and-hold" - the honest question of whether
-   the bot's risk management actually adds value over doing nothing, which several combinations
-   already show it does (losing much less than the raw coins did over that same crash).
+2. Return itself was tried as a THIRD gate, twice, and both attempts broke in opposite directions
+   against real data: "always profitable" failed because the trailing ~1-year window covers a
+   severe crypto-wide crash (buy-and-hold on this watchlist lost 31-70% that year) - no long-only
+   strategy can guarantee a positive return while the underlying coins collapse that hard.
+   "Always beats buy-and-hold" then failed the opposite way - during the trailing ~3-month rally,
+   any strategy with stop-losses that isn't 100% invested at all times will naturally lag a naive
+   buy-and-hold, which is the literal cost of having downside protection, not a flaw. The fix:
+   return isn't a gate at all - drawdown and win rate are what actually answer "could this wreck
+   my account," and return is how the winner gets picked among whatever's already safe.
 
 See `diagnose()` in `tune.py` if you want to re-derive any of this yourself. Tighten or loosen
 further in `tune.py` if your risk tolerance changes.

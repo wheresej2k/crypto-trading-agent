@@ -8,25 +8,30 @@ real risk of tuning to noise that happened to exist in that stretch of history r
 anything that will keep working. Treat the winner here as a hypothesis to try on paper, not a
 proven result. As a partial check against this, every combination is tested across three
 different historical windows (~3 months, ~1 year, ~5 years - close to the full history Alpaca has
-for crypto, which starts 2021-01-01) - a combination only counts as "safe" if it held up in ALL
-of them, not just one.
+for crypto, which starts 2021-01-01).
 
-"Safe" here specifically means, across every tested window:
-  - it never did WORSE than simple buy-and-hold on the same coins over the same period
+"Safe" means, across every tested window:
   - its worst drawdown never exceeded SAFE_MAX_DRAWDOWN_PCT
   - its win rate never fell below MIN_WIN_RATE_PCT
-These numbers ARE this project's quantified "what does working mean" bar from the README - change
-them here to make the bar stricter or looser.
+Among only the combinations that pass both, the winner is whichever made the most money on
+average (see avg_return) - return is NOT itself a pass/fail gate. Two earlier designs tried that
+and both broke, in opposite directions, once tested against real data (2026-09-14):
 
-Why "beats buy-and-hold" instead of "never net-unprofitable" (revised 2026-09-14): the original
-bar required a positive return in every window, including the trailing ~1-year window - but that
-window covers a real, severe crypto-wide crash (simple buy-and-hold on this watchlist lost 31% to
-70% over that year). No long-only strategy (this bot never shorts) can guarantee a positive return
-while the underlying assets themselves collapse that hard - demanding "always profitable" was
-effectively demanding immunity to a bear market, not testing whether the strategy adds value. The
-honest question is whether the bot's risk management (stop-losses, position sizing) meaningfully
-softens a crash compared to just holding - i.e. does it beat the do-nothing alternative - not
-whether it can defy gravity. Confirmed with the user before changing this.
+1. First attempt: "never net-unprofitable" (return >= 0 in every window). Failed because the
+   trailing ~1-year window covers a real, severe crypto-wide crash (buy-and-hold on this
+   watchlist lost 31-70% that year) - no long-only strategy can guarantee a positive return while
+   the underlying assets collapse that hard.
+2. Second attempt: "never underperform buy-and-hold" in every window. Failed in the OPPOSITE
+   direction - during a strong rally (like the trailing ~3-month window), any strategy with
+   stop-losses that isn't 100% invested at all times will naturally lag a naive buy-and-hold.
+   That's the literal cost of having downside protection, not a flaw.
+
+The lesson: return is inherently a noisy, direction-dependent number over any single window - a
+strategy can look "bad" by that measure just from which way the market happened to move during
+the test period. Drawdown and win rate are the numbers that actually answer "could this wreck my
+account" and are what the hard safety gate should be built from. Return still matters - it's how
+the winner gets picked among the safe candidates - it just isn't a second gate that a rally or a
+crash can arbitrarily fail on its own. Confirmed with the user before landing on this design.
 
 Deliberate design choice: this sweep only touches STRATEGY parameters (the SMA windows,
 stop-loss/take-profit, confidence threshold) - it never touches max_position_pct,
@@ -37,9 +42,16 @@ behavior this project's design brief calls out as needing a human decision, not 
 you want to change your risk tier, do that deliberately in config/params.json yourself.
 
 Usage:
-    python tune.py
+    python tune.py            # always fetches fresh history from Alpaca
+    python tune.py --cache    # reuses a local cache of historical bars if present - much faster
+                               # for repeated iteration, but the cache can go stale. Only use this
+                               # while actively experimenting; a real tuning decision (or the
+                               # monthly auto-retune) should use fresh data.
 """
+import argparse
 import dataclasses
+import pickle
+from pathlib import Path
 
 from alpaca.data.historical import CryptoHistoricalDataClient
 
@@ -52,12 +64,28 @@ STOP_LOSS_PCTS = [6, 10, 15]
 TAKE_PROFIT_PCTS = [10, 18, 25]
 MIN_CONFIDENCES = [40, 55]
 
-# The safety bar - a combination must never underperform buy-and-hold, never drawn down worse
-# than this, and never had a win rate below this, in ANY of the three windows tested, to count.
+# The safety bar - a combination must never drawn down worse than this, and never had a win rate
+# below this, in ANY of the three windows tested, to count as "safe". Return is not gated here -
+# see the module docstring for why.
 SAFE_MAX_DRAWDOWN_PCT = -32.0
 MIN_WIN_RATE_PCT = 35.0
 
 WINDOWS_TO_TEST = [("~3 months", 24 * 90), ("~1 year", 24 * 365), ("~5 years", 24 * 1825)]
+
+CACHE_PATH = Path(__file__).parent / ".cache" / "bars_cache.pkl"
+
+
+def _load_bars_cache():
+    if CACHE_PATH.exists():
+        with open(CACHE_PATH, "rb") as f:
+            return pickle.load(f)
+    return None
+
+
+def _save_bars_cache(bars_by_symbol):
+    CACHE_PATH.parent.mkdir(exist_ok=True)
+    with open(CACHE_PATH, "wb") as f:
+        pickle.dump(bars_by_symbol, f)
 
 
 def build_combos():
@@ -75,16 +103,17 @@ def build_combos():
 def sweep(base_settings, data_client, bars_by_symbol=None):
     """Runs every combo across every test window. Returns one row per combo: params plus
     per-window return/drawdown/win-rate/buy-hold-return. `bars_by_symbol` can be passed in
-    pre-fetched (the monthly auto-retune workflow does this to fetch history exactly once).
+    pre-fetched (the monthly auto-retune workflow does this to fetch history exactly once, and
+    main() does this too so it can optionally use the local dev cache).
     """
-    max_hours = max(hours for _, hours in WINDOWS_TO_TEST)
     if bars_by_symbol is None:
+        max_hours = max(hours for _, hours in WINDOWS_TO_TEST)
         print(f"Fetching {max_hours} hours of history once for all combinations...")
         bars_by_symbol = fetch_all_bars(base_settings, data_client, max_hours)
 
     combos = build_combos()
     print(f"Testing {len(combos)} parameter combinations across {len(WINDOWS_TO_TEST)} time windows "
-          f"({len(combos) * len(WINDOWS_TO_TEST)} simulations - this can take a few minutes)...\n")
+          f"({len(combos) * len(WINDOWS_TO_TEST)} simulations)...\n")
 
     results = []
     for sw, lw, sl, tp, mc in combos:
@@ -108,20 +137,18 @@ def sweep(base_settings, data_client, bars_by_symbol=None):
 
 
 def is_safe(row):
-    window_returns, window_drawdowns, window_winrates, window_buyhold = row[-4], row[-3], row[-2], row[-1]
+    window_drawdowns, window_winrates = row[-3], row[-2]
     drawdowns = [v for v in window_drawdowns.values() if v is not None]
     winrates = list(window_winrates.values())
-    buyholds = [window_buyhold[label] for label in window_returns]
 
-    if len(drawdowns) < len(WINDOWS_TO_TEST) or any(v is None for v in buyholds):
+    if len(drawdowns) < len(WINDOWS_TO_TEST):
         return False
     if any(v is None for v in winrates):
         # A window with zero completed round-trip trades has no meaningful win rate - treat that
         # as insufficient evidence rather than letting it silently pass or fail the bar.
         return False
 
-    beats_buy_hold = all(window_returns[label] >= window_buyhold[label] for label in window_returns)
-    return beats_buy_hold and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT and min(winrates) >= MIN_WIN_RATE_PCT
+    return min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT and min(winrates) >= MIN_WIN_RATE_PCT
 
 
 def avg_return(row):
@@ -136,23 +163,26 @@ def rank_safe_combos(results):
     return safe_results
 
 
+def _format_window(window_returns, window_drawdowns, window_winrates, window_buyhold, label):
+    wr = window_winrates[label]
+    return (
+        f"{window_returns[label]:+7.2f}% vs b&h {window_buyhold[label]:+6.1f}% "
+        f"(dd {window_drawdowns[label]:5.2f}%, wr " + (f"{wr:.1f}%)" if wr is not None else "n/a)")
+    )
+
+
 def diagnose(results):
     """When nothing passes the safety filter, a bare 'nothing passed' isn't enough to act on -
-    this reports which specific criterion is the bottleneck (beating buy-and-hold, drawdown, or
-    win rate) and shows the closest near-misses, so there's something to actually decide from
-    instead of just a dead end.
+    this reports which specific criterion (drawdown or win rate) is the bottleneck, and shows the
+    closest near-misses (with return/buy-hold shown for context, even though neither gates
+    safety), so there's something to actually decide from instead of just a dead end.
     """
-    beats_buyhold_count = 0
     drawdown_ok_count = 0
     winrate_ok_count = 0
     for row in results:
-        window_returns, window_drawdowns, window_winrates, window_buyhold = row[-4], row[-3], row[-2], row[-1]
+        window_drawdowns, window_winrates = row[-3], row[-2]
         drawdowns = [v for v in window_drawdowns.values() if v is not None]
         winrates = [v for v in window_winrates.values() if v is not None]
-        buyholds = [window_buyhold[label] for label in window_returns]
-
-        if all(v is not None for v in buyholds) and all(window_returns[l] >= window_buyhold[l] for l in window_returns):
-            beats_buyhold_count += 1
         if drawdowns and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT:
             drawdown_ok_count += 1
         if len(winrates) == len(WINDOWS_TO_TEST) and all(v is not None for v in winrates) and min(winrates) >= MIN_WIN_RATE_PCT:
@@ -160,10 +190,9 @@ def diagnose(results):
 
     total = len(results)
     print(f"Of {total} combinations tested:")
-    print(f"  {beats_buyhold_count} beat simple buy-and-hold in every window")
     print(f"  {drawdown_ok_count} stayed within the {SAFE_MAX_DRAWDOWN_PCT:.0f}% drawdown limit in every window")
     print(f"  {winrate_ok_count} met the {MIN_WIN_RATE_PCT:.0f}% win-rate floor in every window")
-    print("(a combination needs all three to count as 'safe' - whichever count above is lowest is the actual bottleneck)\n")
+    print("(a combination needs both to count as 'safe' - whichever count above is lowest is the actual bottleneck)\n")
 
     print("Closest near-misses (best average return regardless of safety, for comparison):")
     header = (
@@ -174,23 +203,40 @@ def diagnose(results):
     by_return = sorted(results, key=avg_return, reverse=True)
     for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in by_return[:10]:
         row = "  ".join(
-            f"{window_returns[label]:+7.2f}% vs b&h {window_buyhold[label]:+6.1f}% "
-            f"(dd {window_drawdowns[label]:5.2f}%, wr "
-            + (f"{window_winrates[label]:.1f}%)" if window_winrates[label] is not None else "n/a)")
+            _format_window(window_returns, window_drawdowns, window_winrates, window_buyhold, label)
             for label, _ in WINDOWS_TO_TEST
         )
         print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--cache", action="store_true",
+        help="Reuse a local cache of historical bars instead of re-fetching from Alpaca every "
+             "run - much faster while iterating, but the cache can go stale. Don't use this for "
+             "a real tuning decision, only while actively experimenting.",
+    )
+    args = parser.parse_args()
+
     base_settings = load_settings()
     data_client = CryptoHistoricalDataClient(base_settings.alpaca_api_key, base_settings.alpaca_secret_key)
 
-    results = sweep(base_settings, data_client)
+    bars_by_symbol = _load_bars_cache() if args.cache else None
+    if bars_by_symbol:
+        print(f"Using cached historical bars from {CACHE_PATH} (skip --cache for fresh data).\n")
+    else:
+        max_hours = max(hours for _, hours in WINDOWS_TO_TEST)
+        print(f"Fetching {max_hours} hours of history once for all combinations...")
+        bars_by_symbol = fetch_all_bars(base_settings, data_client, max_hours)
+        if args.cache:
+            _save_bars_cache(bars_by_symbol)
+
+    results = sweep(base_settings, data_client, bars_by_symbol=bars_by_symbol)
     safe_results = rank_safe_combos(results)
 
     print(f"{len(safe_results)} of {len(results)} combinations passed the safety filter "
-          f"(beat buy-and-hold in every window, drawdown no worse than {SAFE_MAX_DRAWDOWN_PCT:.0f}%, "
+          f"(drawdown no worse than {SAFE_MAX_DRAWDOWN_PCT:.0f}%, "
           f"win rate at least {MIN_WIN_RATE_PCT:.0f}% in every window).\n")
 
     if not safe_results:
@@ -205,8 +251,7 @@ def main():
     print(header)
     for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in safe_results[:15]:
         row = "  ".join(
-            f"{window_returns[label]:+7.2f}% vs b&h {window_buyhold[label]:+6.1f}% "
-            f"(dd {window_drawdowns[label]:5.2f}%, wr {window_winrates[label]:4.1f}%)"
+            _format_window(window_returns, window_drawdowns, window_winrates, window_buyhold, label)
             for label, _ in WINDOWS_TO_TEST
         )
         print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")

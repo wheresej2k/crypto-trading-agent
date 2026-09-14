@@ -41,9 +41,8 @@ def main():
         print("No combination passed the safety filter this month - leaving config/params.json unchanged.")
         write_summary(
             "## Monthly retune: no proposal\n\n"
-            "No parameter combination passed the safety filter (beats buy-and-hold, "
-            "drawdown/win-rate bar from tune.py) against this month's fresh data. "
-            "config/params.json was left unchanged.\n"
+            "No parameter combination passed the safety filter (the drawdown/win-rate bar from "
+            "tune.py) against this month's fresh data. config/params.json was left unchanged.\n"
         )
         return
 
@@ -97,9 +96,10 @@ def main():
             f"{window_drawdowns[label]:.2f}% | {window_winrates[label]:.1f}% |\n"
         )
     lines.append(
-        "\n**Safety filter (held in every window above):** never underperformed simple "
-        "buy-and-hold on the same coins, drawdown never worse than the configured limit, win "
-        "rate never below the configured minimum - all set in tune.py.\n\n"
+        "\n**Safety filter (held in every window above):** drawdown never worse than the "
+        "configured limit, win rate never below the configured minimum - both set in tune.py. "
+        "Return/buy-and-hold are shown for context and used to rank the winner, but are not "
+        "themselves a pass/fail gate (see tune.py's module docstring for why).\n\n"
         "Review these numbers before merging - a good backtest is a hypothesis worth trying on "
         "paper, not a guarantee. Position size, total exposure, and daily-loss limits are never "
         "touched by this process - only you change those, directly in config/params.json.\n"
