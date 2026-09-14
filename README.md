@@ -90,11 +90,14 @@ a new BUY - it never blocks a SELL/exit.
   shows the full traceback) - nothing fails silently.
 - **Missed-run detection**: this is the direct fix for the exact problem the stock bot hit - a
   GitHub Actions cron schedule silently not firing, with nothing to notice unless someone happens
-  to check. `heartbeat.py` records a timestamp after every run that completes without crashing;
-  a completely separate scheduled workflow (`.github/workflows/watchdog.yml`, `watchdog.py`) checks
-  that timestamp every 3 hours and texts a plain-text warning if more than `WATCHDOG_ALERT_AFTER_HOURS`
-  (default 3) hours have passed with no successful run. It runs on its own independent trigger, so
-  it still works even if the main hourly workflow's own schedule is the thing that broke.
+  to check - confirmed as a real, not just theoretical, risk on 2026-09-14, when this bot's own
+  schedule silently dropped a single run. `heartbeat.py` records a timestamp after every run that
+  completes without crashing; a completely separate scheduled workflow
+  (`.github/workflows/watchdog.yml`, `watchdog.py`) checks that timestamp **hourly** and texts a
+  plain-text warning if more than `WATCHDOG_ALERT_AFTER_HOURS` (default 2) hours have passed with
+  no successful run - low enough to catch roughly 2 consecutive missed runs, not just a sustained
+  multi-hour outage. It runs on its own independent trigger, so it still works even if the main
+  hourly workflow's own schedule is the thing that broke.
 - **The stop-loss/take-profit protection doesn't depend on the bot running at all.** Because
   Alpaca has no crypto bracket orders, `position_tracker.py` places the stop-loss and take-profit
   as two independent resting orders directly on Alpaca's exchange right after a buy fills. Those
@@ -245,7 +248,7 @@ Three separate GitHub Actions workflows, all free:
 - **`.github/workflows/hourly-trade.yml`** - runs `trader.py` every hour, texts a daily summary
   image once a day (default 13:00 UTC, configurable), commits the updated trade log and state
   back to the repo.
-- **`.github/workflows/watchdog.yml`** - runs independently every 3 hours, texts a plain warning
+- **`.github/workflows/watchdog.yml`** - runs independently every hour, texts a plain warning
   if no successful run has completed in over `WATCHDOG_ALERT_AFTER_HOURS` hours.
 - **`.github/workflows/monthly-retune.yml`** - runs on the 1st of each month, may open a pull
   request proposing updated strategy parameters (never auto-merged).

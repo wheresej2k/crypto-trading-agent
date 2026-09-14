@@ -2,15 +2,22 @@ name: Crypto bot watchdog
 
 on:
   schedule:
-    # Every 3 hours, offset from the hourly job's :05 so it isn't checking mid-run. Runs
-    # independently of the hourly-trade workflow on purpose - if THAT workflow's schedule
-    # silently fails to fire (the exact failure mode that hit the stock bot), this one still
-    # runs and notices, because it doesn't depend on the same trigger.
-    - cron: "47 */3 * * *"
+    # Hourly at :50, offset from the trading job's :05 and the dashboard refresh's :20 so it
+    # isn't checking mid-run. Runs independently of the hourly-trade workflow on purpose - if
+    # THAT workflow's schedule silently fails to fire (the exact failure mode that hit the
+    # stock bot, and that this bot itself hit once for real on 2026-09-14, ~22:05 UTC, with a
+    # single run silently dropped), this one still runs and notices, because it doesn't depend
+    # on the same trigger. Checking hourly (not every 3h, the original cadence) is what makes a
+    # 2-hour alert threshold (below) actually catchable - a check that only runs every 3 hours
+    # can't detect a 2-hour gap in time.
+    - cron: "50 * * * *"
   workflow_dispatch: {}
 
 env:
-  WATCHDOG_ALERT_AFTER_HOURS: "3"
+  # Lowered from 3 to 2 hours after a real single-run miss on 2026-09-14 went undetected (the
+  # very next hourly run succeeded before 3 hours of silence ever accumulated). 2 hours means
+  # roughly "2 consecutive misses" gets caught, not just a sustained multi-hour outage.
+  WATCHDOG_ALERT_AFTER_HOURS: "2"
 
 jobs:
   check:
