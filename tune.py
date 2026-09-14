@@ -44,8 +44,12 @@ MIN_CONFIDENCES = [40, 55]
 
 # The safety bar - a combination must never have lost money, never drawn down worse than this,
 # and never had a win rate below this, in ANY of the three windows tested, to count at all.
-SAFE_MAX_DRAWDOWN_PCT = -22.0
-MIN_WIN_RATE_PCT = 40.0
+# Adjusted 2026-09-14 from an initial guess (-22%/40%) to numbers grounded in what the real
+# ~5-year sweep actually showed was achievable - nothing survived the 2022 crash under the
+# original bar. The user explicitly approved this loosening after seeing the near-miss data
+# (see tune.py's diagnose() output) - this is not an automated change.
+SAFE_MAX_DRAWDOWN_PCT = -32.0
+MIN_WIN_RATE_PCT = 35.0
 
 WINDOWS_TO_TEST = [("~3 months", 24 * 90), ("~1 year", 24 * 365), ("~5 years", 24 * 1825)]
 
@@ -122,6 +126,51 @@ def rank_safe_combos(results):
     return safe_results
 
 
+def diagnose(results):
+    """When nothing passes the safety filter, a bare 'nothing passed' isn't enough to act on -
+    this reports which specific criterion is the bottleneck (profitability, drawdown, or win
+    rate) and shows the closest near-misses, so there's something to actually decide from instead
+    of just a dead end.
+    """
+    profitable_count = 0
+    drawdown_ok_count = 0
+    winrate_ok_count = 0
+    for row in results:
+        window_returns, window_drawdowns, window_winrates = row[-3], row[-2], row[-1]
+        returns = [v for v in window_returns.values() if v is not None]
+        drawdowns = [v for v in window_drawdowns.values() if v is not None]
+        winrates = [v for v in window_winrates.values() if v is not None]
+        if len(returns) == len(WINDOWS_TO_TEST) and min(returns) >= 0:
+            profitable_count += 1
+        if drawdowns and min(drawdowns) >= SAFE_MAX_DRAWDOWN_PCT:
+            drawdown_ok_count += 1
+        if len(winrates) == len(WINDOWS_TO_TEST) and all(v is not None for v in winrates) and min(winrates) >= MIN_WIN_RATE_PCT:
+            winrate_ok_count += 1
+
+    total = len(results)
+    print(f"Of {total} combinations tested:")
+    print(f"  {profitable_count} were profitable in every window")
+    print(f"  {drawdown_ok_count} stayed within the {SAFE_MAX_DRAWDOWN_PCT:.0f}% drawdown limit in every window")
+    print(f"  {winrate_ok_count} met the {MIN_WIN_RATE_PCT:.0f}% win-rate floor in every window")
+    print("(a combination needs all three to count as 'safe' - whichever count above is lowest is the actual bottleneck)\n")
+
+    print("Closest near-misses (best average return regardless of safety, for comparison):")
+    header = (
+        f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
+        + "  ".join(f"{label:>26}" for label, _ in WINDOWS_TO_TEST)
+    )
+    print(header)
+    by_return = sorted(results, key=avg_return, reverse=True)
+    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates in by_return[:10]:
+        row = "  ".join(
+            f"{window_returns[label]:+7.2f}% (dd {window_drawdowns[label]:5.2f}%, wr "
+            f"{window_winrates[label]:.1f}%)" if window_winrates[label] is not None else
+            f"{window_returns[label]:+7.2f}% (dd {window_drawdowns[label]:5.2f}%, wr  n/a)"
+            for label, _ in WINDOWS_TO_TEST
+        )
+        print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
+
+
 def main():
     base_settings = load_settings()
     data_client = CryptoHistoricalDataClient(base_settings.alpaca_api_key, base_settings.alpaca_secret_key)
@@ -132,6 +181,11 @@ def main():
     print(f"{len(safe_results)} of {len(results)} combinations passed the safety filter "
           f"(profitable in every window, drawdown no worse than {SAFE_MAX_DRAWDOWN_PCT:.0f}%, "
           f"win rate at least {MIN_WIN_RATE_PCT:.0f}% in every window).\n")
+
+    if not safe_results:
+        print("No combination passed the safety filter.\n")
+        diagnose(results)
+        return
 
     header = (
         f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
@@ -144,10 +198,6 @@ def main():
             for label, _ in WINDOWS_TO_TEST
         )
         print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
-
-    if not safe_results:
-        print("\nNo combination passed the safety filter - try loosening SAFE_MAX_DRAWDOWN_PCT or MIN_WIN_RATE_PCT.")
-        return
 
     best = safe_results[0]
     sw, lw, sl, tp, mc = best[:5]
