@@ -1,9 +1,9 @@
 {
-  "_comment": "Tunable strategy/risk knobs. NOT secret - committed to git on purpose so the monthly auto-retune workflow can propose changes here as a reviewable pull request diff. See README.md for what each field means. short_sma_window/long_sma_window/take_profit_pct/min_confidence are an interim seed from tune.py's best pre-trend-filter result (2026-09-14); trend_window is a placeholder pending a sweep that includes it - do not treat this as validated until tune.py has actually tested this combination together.",
+  "_comment": "Tunable strategy/risk knobs. NOT secret - committed to git on purpose so the monthly auto-retune workflow can propose changes here as a reviewable pull request diff. See README.md for what each field means. Validated by tune.py 2026-09-14 (656-combination sweep including the trend filter): profitable across all three test windows (~3mo/~1yr/~5yr), including the trailing ~1yr crash, and beats simple buy-and-hold in 2 of 3 windows - 269 of 656 combinations passed the safety filter (drawdown <=32%, win rate >=35% in every window), this was the most profitable among them.",
   "short_sma_window": 4,
   "long_sma_window": 24,
-  "trend_window": 240,
-  "stop_loss_pct": 18,
+  "trend_window": 360,
+  "stop_loss_pct": 15,
   "take_profit_pct": 8,
   "min_confidence": 60,
   "max_position_pct": 15,

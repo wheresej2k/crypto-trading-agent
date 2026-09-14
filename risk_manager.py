@@ -59,7 +59,7 @@ def evaluate_decisions(
             continue
 
         if d.action == "HOLD":
-            skipped.append(SkippedDecision(d.symbol, d.action, "strategy recommends hold"))
+            skipped.append(SkippedDecision(d.symbol, d.action, d.reasoning))
             continue
 
         if d.confidence < settings.min_confidence:

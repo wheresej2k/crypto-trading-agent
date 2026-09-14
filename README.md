@@ -1,10 +1,10 @@
 # Crypto Trading Agent (paper trading, 100% free)
 
 An automated crypto trading bot: a free, rule-based strategy (moving-average crossover on hourly
-bars) watches a crypto watchlist 24/7 and generates buy/sell/hold signals, a risk-limit layer
-filters those signals before anything reaches Alpaca, and a "software bracket" (see below) manages
-stop-loss/take-profit protection the way Alpaca's own bracket orders would - if crypto supported
-them, which it doesn't.
+bars, plus a long-term trend filter - see `strategy.py`) watches a crypto watchlist 24/7 and
+generates buy/sell/hold signals, a risk-limit layer filters those signals before anything reaches
+Alpaca, and a "software bracket" (see below) manages stop-loss/take-profit protection the way
+Alpaca's own bracket orders would - if crypto supported them, which it doesn't.
 
 **This runs entirely on free services: Alpaca's paper-trading environment (no real money, no
 funding required), Alpaca's free crypto market data, and GitHub Actions' free automation minutes.
@@ -54,6 +54,18 @@ further in `tune.py` if your risk tolerance changes.
 **This is a bar for trusting the strategy's parameters, not a guarantee about the future.** A
 backtest passing this bar is a hypothesis worth continuing to test on paper - see the curve-fitting
 caveat in `tune.py`.
+
+## The strategy: crossover + trend filter
+
+The tactical signal is a moving-average crossover (`short_sma_window`/`long_sma_window`): short-term
+average above long-term average is bullish, below is bearish. Added 2026-09-14: a **trend filter**
+(`trend_window`, a much longer moving average) that a BUY must also clear - the price has to be
+above that macro average, not just crossing the shorter-term one. A plain crossover repeatedly
+bought small bounces and got stopped out again during a sustained decline (see the tuning history
+below); the trend filter keeps the bot in cash during a confirmed downtrend instead, which is what
+took the validated parameters from "loses less than holding" to "actually profitable" through the
+worst tested year (see `config/params.json`'s comment for the exact numbers). It only ever blocks
+a new BUY - it never blocks a SELL/exit.
 
 ## The four pillars this project is built around
 
@@ -271,8 +283,8 @@ What *would* become public if you switch: the code itself, and the trade log/per
 
 ## Important limitations - please read
 
-- **This is not a validated trading strategy.** SMA crossover is a simple, transparent, and free
-  approach, but it's a basic technical indicator, not an edge over the market. Crypto is also
+- **This is not a validated trading strategy.** SMA crossover plus a long-term trend filter are
+  simple, transparent, free technical rules, not an edge over the market. Crypto is also
   meaningfully more volatile than the stock bot's watchlist - treat any paper-trading results as
   exploratory, not predictive of real performance.
 - **Stay on paper trading.** Nothing in this project should be pointed at a live account. `paper=True`
