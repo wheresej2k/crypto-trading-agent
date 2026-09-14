@@ -79,6 +79,12 @@ class CryptoBroker:
     def get_positions(self) -> dict[str, PositionSnapshot]:
         positions = {}
         for p in self.trading.get_all_positions():
+            if "/" not in p.symbol:
+                # Not a crypto position - Alpaca's account-level position list includes every
+                # asset class. If this same paper account is ALSO used by a stock bot (a plain
+                # ticker like "AAPL" has no slash), its holdings must never leak into this bot's
+                # exposure/risk math - crypto symbols are always "BASE/QUOTE" (e.g. "BTC/USD").
+                continue
             positions[p.symbol] = PositionSnapshot(
                 symbol=p.symbol,
                 qty=float(p.qty),

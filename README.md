@@ -279,3 +279,11 @@ What *would* become public if you switch: the code itself, and the trade log/per
   multiple stop/target order pairs into one.
 - **This is built for hourly decisions on a five-coin watchlist**, not high-frequency or
   scalping-style trading.
+- **If you reuse the same Alpaca paper keys as `stock-trading-agent`**, both bots share one
+  account. `crypto_broker.py` filters `get_positions()` to crypto symbols only (anything with a
+  "/" in it), so one bot's holdings never count toward the other's exposure caps - but
+  `max_position_pct`/`max_total_exposure_pct` are still computed against the account's *total*
+  equity, which includes whatever the other bot is holding. In practice this only makes the caps
+  slightly more conservative than "purely this bot's share" would be (the hard `cash` check still
+  prevents ever overspending) - not a safety problem, just worth knowing the % caps aren't
+  measuring a perfectly isolated sub-account.
