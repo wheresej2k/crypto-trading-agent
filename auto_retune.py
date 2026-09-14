@@ -19,7 +19,7 @@ from config import PARAMS_PATH, load_params, load_settings
 from tune import WINDOWS_TO_TEST, rank_safe_combos, sweep
 
 SUMMARY_PATH = "retune_summary.md"
-TUNED_KEYS = ["short_sma_window", "long_sma_window", "stop_loss_pct", "take_profit_pct", "min_confidence"]
+TUNED_KEYS = ["short_sma_window", "long_sma_window", "trend_window", "stop_loss_pct", "take_profit_pct", "min_confidence"]
 
 
 def write_summary(text: str):
@@ -47,10 +47,10 @@ def main():
         return
 
     best = safe_results[0]
-    sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold = best
+    sw, lw, sl, tp, mc, tw, window_returns, window_drawdowns, window_winrates, window_buyhold = best
     proposed = dict(current_params)
     proposed.update({
-        "short_sma_window": sw, "long_sma_window": lw,
+        "short_sma_window": sw, "long_sma_window": lw, "trend_window": tw,
         "stop_loss_pct": sl, "take_profit_pct": tp, "min_confidence": mc,
     })
 
@@ -81,6 +81,7 @@ def main():
     labels = {
         "short_sma_window": "Short SMA window (hours)",
         "long_sma_window": "Long SMA window (hours)",
+        "trend_window": "Trend filter window (hours)",
         "stop_loss_pct": "Stop-loss %",
         "take_profit_pct": "Take-profit %",
         "min_confidence": "Min confidence",

@@ -56,7 +56,7 @@ def main():
 
     # --- ACCURATE pillar: fetch, then validate, hourly market data before trusting it ---
     print(f"Fetching hourly bars for: {', '.join(settings.watchlist)}")
-    fetch_hours = settings.long_sma_window + 10
+    fetch_hours = max(settings.long_sma_window, settings.trend_window) + 10
     raw_bars = {}
     for symbol in settings.watchlist:
         try:
@@ -65,7 +65,7 @@ def main():
             print(f"  WARNING: could not fetch data for {symbol}: {e}")
             log_row(symbol, "DATA", "failed", reasoning=f"fetch failed: {e}")
 
-    valid_bars, issues = validate(raw_bars, settings.long_sma_window)
+    valid_bars, issues = validate(raw_bars, max(settings.long_sma_window, settings.trend_window))
     for issue in issues:
         print(f"  DATA SKIP {issue.symbol:10s} - {issue.reason}")
         log_row(issue.symbol, "DATA", "skipped", reasoning=issue.reason)
@@ -78,7 +78,7 @@ def main():
 
     # --- Generate signals, apply risk limits ---
     print("Generating signals (SMA crossover, hourly bars)...")
-    decisions = generate_signals(valid_bars, positions, settings.short_sma_window, settings.long_sma_window)
+    decisions = generate_signals(valid_bars, positions, settings.short_sma_window, settings.long_sma_window, settings.trend_window)
     decisions_by_symbol = {d.symbol: d for d in decisions}
 
     approved_buys, approved_sells, skipped = evaluate_decisions(

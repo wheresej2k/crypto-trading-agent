@@ -30,16 +30,19 @@ class ValidationIssue:
 
 def validate(
     bars_by_symbol: dict[str, list[Bar]],
-    long_sma_window: int,
+    required_window: int,
     now: datetime | None = None,
 ) -> tuple[dict[str, list[Bar]], list[ValidationIssue]]:
+    """`required_window` is the longest lookback the strategy needs (the largest of
+    long_sma_window and trend_window) - not necessarily long_sma_window itself.
+    """
     now = now or datetime.now(timezone.utc)
     valid: dict[str, list[Bar]] = {}
     issues: list[ValidationIssue] = []
 
     for symbol, bars in bars_by_symbol.items():
-        if len(bars) < long_sma_window + 1:
-            issues.append(ValidationIssue(symbol, f"only {len(bars)} hourly bars, need {long_sma_window + 1}"))
+        if len(bars) < required_window + 1:
+            issues.append(ValidationIssue(symbol, f"only {len(bars)} hourly bars, need {required_window + 1}"))
             continue
 
         latest_age_hours = (now - bars[-1].timestamp).total_seconds() / 3600

@@ -58,11 +58,12 @@ from alpaca.data.historical import CryptoHistoricalDataClient
 from backtest import fetch_all_bars, simulate
 from config import load_settings
 
-SHORT_WINDOWS = [6, 12, 24]      # hours
-LONG_WINDOWS = [24, 72, 168]     # hours (1 day, 3 days, 1 week)
-STOP_LOSS_PCTS = [6, 10, 15]
-TAKE_PROFIT_PCTS = [10, 18, 25]
-MIN_CONFIDENCES = [40, 55]
+SHORT_WINDOWS = [4, 8, 12, 24]        # hours
+LONG_WINDOWS = [24, 48, 96, 168]      # hours (1 day, 2 days, 4 days, 1 week)
+STOP_LOSS_PCTS = [8, 12, 15, 18]
+TAKE_PROFIT_PCTS = [8, 12]            # narrowed after the first wide sweep - tp=8 dominated
+MIN_CONFIDENCES = [45, 60]            # narrowed after the first wide sweep - 30 rarely won
+TREND_WINDOWS = [168, 240, 360]       # hours (1 week, 10 days, 15 days) - the macro trend filter
 
 # The safety bar - a combination must never drawn down worse than this, and never had a win rate
 # below this, in ANY of the three windows tested, to count as "safe". Return is not gated here -
@@ -90,13 +91,14 @@ def _save_bars_cache(bars_by_symbol):
 
 def build_combos():
     return [
-        (sw, lw, sl, tp, mc)
+        (sw, lw, sl, tp, mc, tw)
         for sw in SHORT_WINDOWS
         for lw in LONG_WINDOWS
         for sl in STOP_LOSS_PCTS
         for tp in TAKE_PROFIT_PCTS
         for mc in MIN_CONFIDENCES
-        if sw < lw
+        for tw in TREND_WINDOWS
+        if sw < lw < tw
     ]
 
 
@@ -116,10 +118,10 @@ def sweep(base_settings, data_client, bars_by_symbol=None):
           f"({len(combos) * len(WINDOWS_TO_TEST)} simulations)...\n")
 
     results = []
-    for sw, lw, sl, tp, mc in combos:
+    for sw, lw, sl, tp, mc, tw in combos:
         settings = dataclasses.replace(
             base_settings,
-            short_sma_window=sw, long_sma_window=lw,
+            short_sma_window=sw, long_sma_window=lw, trend_window=tw,
             stop_loss_pct=sl, take_profit_pct=tp, min_confidence=mc,
         )
         window_returns, window_drawdowns, window_winrates, window_buyhold = {}, {}, {}, {}
@@ -131,7 +133,7 @@ def sweep(base_settings, data_client, bars_by_symbol=None):
             window_winrates[label] = r["win_rate_pct"] if r else None
             window_buyhold[label] = r["buy_hold_return_pct"] if r else None
 
-        results.append((sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold))
+        results.append((sw, lw, sl, tp, mc, tw, window_returns, window_drawdowns, window_winrates, window_buyhold))
 
     return results
 
@@ -196,17 +198,17 @@ def diagnose(results):
 
     print("Closest near-misses (best average return regardless of safety, for comparison):")
     header = (
-        f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
+        f"{'short':>5} {'long':>5} {'trend':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
         + "  ".join(f"{label:>32}" for label, _ in WINDOWS_TO_TEST)
     )
     print(header)
     by_return = sorted(results, key=avg_return, reverse=True)
-    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in by_return[:10]:
+    for sw, lw, sl, tp, mc, tw, window_returns, window_drawdowns, window_winrates, window_buyhold in by_return[:10]:
         row = "  ".join(
             _format_window(window_returns, window_drawdowns, window_winrates, window_buyhold, label)
             for label, _ in WINDOWS_TO_TEST
         )
-        print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
+        print(f"{sw:>5} {lw:>5} {tw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
 
 
 def main():
@@ -245,21 +247,21 @@ def main():
         return
 
     header = (
-        f"{'short':>5} {'long':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
+        f"{'short':>5} {'long':>5} {'trend':>5} {'stop%':>6} {'tp%':>5} {'minconf':>7}  "
         + "  ".join(f"{label:>32}" for label, _ in WINDOWS_TO_TEST)
     )
     print(header)
-    for sw, lw, sl, tp, mc, window_returns, window_drawdowns, window_winrates, window_buyhold in safe_results[:15]:
+    for sw, lw, sl, tp, mc, tw, window_returns, window_drawdowns, window_winrates, window_buyhold in safe_results[:15]:
         row = "  ".join(
             _format_window(window_returns, window_drawdowns, window_winrates, window_buyhold, label)
             for label, _ in WINDOWS_TO_TEST
         )
-        print(f"{sw:>5} {lw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
+        print(f"{sw:>5} {lw:>5} {tw:>5} {sl:>6} {tp:>5} {mc:>7}  {row}")
 
     best = safe_results[0]
-    sw, lw, sl, tp, mc = best[:5]
+    sw, lw, sl, tp, mc, tw = best[:6]
     print("\nMost profitable combination that still passed the safety filter:")
-    print(f"  short={sw}h, long={lw}h, stop_loss={sl}%, take_profit={tp}%, min_confidence={mc}")
+    print(f"  short={sw}h, long={lw}h, trend={tw}h, stop_loss={sl}%, take_profit={tp}%, min_confidence={mc}")
     print("Running this script never changes anything live on its own - this only updates")
     print("config/params.json if you copy these values in yourself, or approve the automated")
     print("monthly retune workflow's pull request. See the caveat at the top of this file.")

@@ -63,8 +63,9 @@ def run_backtest(settings, data_client, hours):
 
 
 def simulate(settings, bars_by_symbol):
+    required_window = max(settings.long_sma_window, settings.trend_window)
     bars_by_symbol = {
-        s: bars for s, bars in bars_by_symbol.items() if len(bars) >= settings.long_sma_window + 1
+        s: bars for s, bars in bars_by_symbol.items() if len(bars) >= required_window + 1
     }
     if not bars_by_symbol:
         return None
@@ -75,9 +76,10 @@ def simulate(settings, bars_by_symbol):
     closes_by_symbol = {s: [b.close for b in bars] for s, bars in bars_by_symbol.items()}
     short_sma_by_symbol = {s: sma_series(c, settings.short_sma_window) for s, c in closes_by_symbol.items()}
     long_sma_by_symbol = {s: sma_series(c, settings.long_sma_window) for s, c in closes_by_symbol.items()}
+    trend_sma_by_symbol = {s: sma_series(c, settings.trend_window) for s, c in closes_by_symbol.items()}
 
     num_hours = min(len(b) for b in bars_by_symbol.values())
-    start_index = settings.long_sma_window
+    start_index = required_window
 
     cash = STARTING_CASH
     positions: dict[str, dict] = {}
@@ -123,10 +125,15 @@ def simulate(settings, bars_by_symbol):
         for symbol in bars_by_symbol:
             short_sma = short_sma_by_symbol[symbol][i]
             long_sma = long_sma_by_symbol[symbol][i]
-            if math.isnan(short_sma) or math.isnan(long_sma):
+            trend_sma = trend_sma_by_symbol[symbol][i]
+            if math.isnan(short_sma) or math.isnan(long_sma) or math.isnan(trend_sma):
                 continue
+            trend_ok = closes_now[symbol] >= trend_sma
             has_position = symbol in position_snapshots
-            decisions.append(decide(symbol, short_sma, long_sma, has_position, settings.short_sma_window, settings.long_sma_window))
+            decisions.append(decide(
+                symbol, short_sma, long_sma, has_position,
+                settings.short_sma_window, settings.long_sma_window, trend_ok,
+            ))
 
         approved_buys, approved_sells, _ = evaluate_decisions(decisions, settings, equity, cash, position_snapshots, day_pl_pct)
 

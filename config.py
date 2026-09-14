@@ -27,6 +27,7 @@ PARAMS_PATH = Path(__file__).parent / "config" / "params.json"
 REQUIRED_PARAM_KEYS = [
     "short_sma_window",
     "long_sma_window",
+    "trend_window",
     "stop_loss_pct",
     "take_profit_pct",
     "min_confidence",
@@ -51,6 +52,7 @@ class Settings:
     watchlist: list[str]
     short_sma_window: int
     long_sma_window: int
+    trend_window: int
     stop_loss_pct: float
     take_profit_pct: float
     min_confidence: float
@@ -87,6 +89,7 @@ def load_settings(params_path: Path = PARAMS_PATH) -> Settings:
         watchlist=watchlist,
         short_sma_window=int(params["short_sma_window"]),
         long_sma_window=int(params["long_sma_window"]),
+        trend_window=int(params["trend_window"]),
         stop_loss_pct=float(params["stop_loss_pct"]),
         take_profit_pct=float(params["take_profit_pct"]),
         min_confidence=float(params["min_confidence"]),
