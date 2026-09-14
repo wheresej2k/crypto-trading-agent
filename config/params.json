@@ -1,0 +1,12 @@
+{
+  "_comment": "Tunable strategy/risk knobs, seeded at the 'moderate' risk tier before tune.py has run. NOT secret - committed to git on purpose so the monthly auto-retune workflow can propose changes here as a reviewable pull request diff. See README.md for what each field means.",
+  "short_sma_window": 12,
+  "long_sma_window": 48,
+  "stop_loss_pct": 8,
+  "take_profit_pct": 12,
+  "min_confidence": 50,
+  "max_position_pct": 15,
+  "max_total_exposure_pct": 75,
+  "max_daily_loss_pct": 5,
+  "max_trades_per_run": 3
+}
