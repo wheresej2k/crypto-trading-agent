@@ -60,6 +60,13 @@ jobs:
         run: python notify.py
 
       - name: Commit updated trade log and state
+        # Runs regardless of whether the notify step above succeeded, failed, or was skipped -
+        # discovered 2026-09-15 that a notify.py failure (bad Gmail credentials) was silently
+        # preventing this step from ever running, so a real successful trading run could vanish
+        # from the repo's own history just because the phone notification failed. The heartbeat
+        # and trade log are the actual reliability mechanism; a notification failure must never
+        # block them from being recorded.
+        if: always()
         run: |
           git config user.name "crypto-trading-bot"
           git config user.email "actions@users.noreply.github.com"
