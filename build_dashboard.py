@@ -234,6 +234,7 @@ def main():
       <div class="card"><div class="label">Today's P/L</div><div class="value {'pos' if day_pl_usd >= 0 else 'neg'}">{fmt_pct(day_pl_pct)}</div></div>
       <div class="card"><div class="label">All-time P/L</div><div class="value {'pos' if all_time_usd >= 0 else 'neg'}">{fmt_pct(all_time_pct)}</div></div>
       <div class="card"><div class="label">Open positions</div><div class="value">{len(positions)}</div></div>
+      <div class="card"><div class="label">Completed runs</div><div class="value">{last_success.get('run_count', 'n/a')}</div></div>
     </div>
 
     <section>
