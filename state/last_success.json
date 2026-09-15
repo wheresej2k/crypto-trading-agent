@@ -1,5 +1,6 @@
 {
-  "timestamp_utc": "2026-09-15T14:24:43+00:00",
+  "timestamp_utc": "2026-09-15T18:05:30+00:00",
   "equity": 100000.0,
-  "trades_executed": 0
+  "trades_executed": 0,
+  "run_count": 1
 }
