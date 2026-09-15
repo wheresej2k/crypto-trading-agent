@@ -7,7 +7,12 @@ on:
     # GitHub's own docs warn can delay jobs, and gives the hourly bar a moment to finalize on
     # Alpaca's side before we fetch it.
     - cron: "5 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_summary:
+        description: "Send the phone summary regardless of the hour (useful for testing Gmail credentials)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -45,7 +50,7 @@ jobs:
         id: check_hour
         run: |
           HOUR=$(date -u +%H)
-          if [ "$HOUR" = "$DAILY_SUMMARY_HOUR_UTC" ]; then
+          if [ "$HOUR" = "$DAILY_SUMMARY_HOUR_UTC" ] || [ "${{ github.event.inputs.force_summary }}" = "true" ]; then
             echo "is_summary_time=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_summary_time=false" >> "$GITHUB_OUTPUT"
