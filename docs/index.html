@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crypto Bots - Alpaca Trend-Following + Kraken Mean-Reversion</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1216; --panel: #171b21; --border: #2a2f37; --text: #e7e9ec; --muted: #9aa4b2;
+    --green: #3ecf8e; --red: #ef5f5f; --accent: #5b9dff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f7f8fa; --panel: #ffffff; --border: #e2e5ea; --text: #171b21; --muted: #5b6472; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); margin: 0; padding: 24px 16px 60px;
+    font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    background: none; border: none; color: var(--muted); font: inherit; font-weight: 600;
+    padding: 10px 4px; margin-right: 16px; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .card .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  section h2 { font-size: 15px; margin: 0 0 12px; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td:last-child, th:last-child { white-space: normal; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .row-buy { background: color-mix(in srgb, var(--green) 8%, transparent); }
+  .row-sell { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .row-error { background: color-mix(in srgb, var(--red) 10%, transparent); }
+  .muted { color: var(--muted); }
+  .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; font-size: 13px; }
+  .params div span { color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; }
+  a { color: var(--accent); }
+  code { background: var(--border); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  iframe { width: 100%; height: 1700px; border: 0; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Crypto Paper-Trading Bots</h1>
+  <p class="subtitle">
+    Two independent, free, rule-based paper-trading bots. Rebuilt automatically by GitHub Actions
+    after every trading run - nothing on this page depends on Claude in any way.
+    Last rebuilt: <span class="local-time" data-utc="2026-09-15T16:22:22.694865+00:00">2026-09-15T16:22:22.694865+00:00</span>.
+  </p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="alpaca">Trend-Following (Alpaca)</button>
+    <button class="tab-btn" data-tab="kraken">Mean-Reversion (Kraken)</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-alpaca">
+    <p class="subtitle">
+      Real Alpaca paper trading account (simulated money, not real trades). Trend-following
+      crossover strategy, hourly runs. Last successful run: <span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span>
+      (8.8h ago).
+    </p>
+
+    <div class="cards">
+      <div class="card"><div class="label">Equity</div><div class="value">$100,000.00</div></div>
+      <div class="card"><div class="label">Cash</div><div class="value">$100,000.00</div></div>
+      <div class="card"><div class="label">Today's P/L</div><div class="value pos">+0.00%</div></div>
+      <div class="card"><div class="label">All-time P/L</div><div class="value pos">+0.00%</div></div>
+      <div class="card"><div class="label">Open positions</div><div class="value">0</div></div>
+    </div>
+
+    <section>
+      <h2>Open positions</h2>
+      <p class="muted">No open positions.</p>
+    </section>
+
+    <section>
+      <h2>Live strategy parameters</h2>
+      <div class="params">
+        <div><span>Short SMA window: </span>4h</div>
+        <div><span>Long SMA window: </span>24h</div>
+        <div><span>Trend filter window: </span>360h</div>
+        <div><span>Stop-loss: </span>18%</div>
+        <div><span>Take-profit: </span>8%</div>
+        <div><span>Min confidence: </span>65</div>
+        <div><span>Max position size: </span>15% of equity</div>
+        <div><span>Max total exposure: </span>75%</div>
+        <div><span>Max daily loss: </span>5%</div>
+      </div>
+      <p class="muted" style="margin-top:12px;">
+        Validated safety gates (must hold in every backtest window before any config goes live):
+        max drawdown &le; 32%, min win rate &ge; 35%.
+      </p>
+    </section>
+
+    <section>
+      <h2>Recent activity (last 20 log rows)</h2>
+      <div class="table-scroll"><table><thead><tr><th>Time</th><th>Symbol</th><th>Action</th><th>Status</th><th>Amount</th><th>Reasoning</th></tr></thead><tbody><tr class=""><td><span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span></td><td>DOGE/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -1.21% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span></td><td>LINK/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -0.61% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span></td><td>SOL/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -1.04% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span></td><td>ETH/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -1.10% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T07:34:31+00:00">2026-09-15T07:34:31+00:00 UTC</span></td><td>BTC/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -0.97% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T01:22:35+00:00">2026-09-15T01:22:35+00:00 UTC</span></td><td>DOGE/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -0.46% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T01:22:35+00:00">2026-09-15T01:22:35+00:00 UTC</span></td><td>LINK/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg is 0.62% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T01:22:35+00:00">2026-09-15T01:22:35+00:00 UTC</span></td><td>SOL/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 12 below minimum 65</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T01:22:35+00:00">2026-09-15T01:22:35+00:00 UTC</span></td><td>ETH/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -0.06% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-15T01:22:35+00:00">2026-09-15T01:22:35+00:00 UTC</span></td><td>BTC/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg -0.06% vs 24h avg - no actionable signal</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T23:02:44+00:00">2026-09-14T23:02:44+00:00 UTC</span></td><td>DOGE/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg is 0.34% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T23:02:44+00:00">2026-09-14T23:02:44+00:00 UTC</span></td><td>LINK/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg is 1.48% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T23:02:44+00:00">2026-09-14T23:02:44+00:00 UTC</span></td><td>SOL/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 33 below minimum 65</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T23:02:44+00:00">2026-09-14T23:02:44+00:00 UTC</span></td><td>ETH/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 26 below minimum 65</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T23:02:44+00:00">2026-09-14T23:02:44+00:00 UTC</span></td><td>BTC/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 19 below minimum 65</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T21:13:50+00:00">2026-09-14T21:13:50+00:00 UTC</span></td><td>DOGE/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg is 1.09% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T21:13:50+00:00">2026-09-14T21:13:50+00:00 UTC</span></td><td>LINK/USD</td><td>HOLD</td><td>skipped</td><td></td><td>4h avg is 2.54% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T21:13:50+00:00">2026-09-14T21:13:50+00:00 UTC</span></td><td>SOL/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 50 below minimum 60</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T21:13:50+00:00">2026-09-14T21:13:50+00:00 UTC</span></td><td>ETH/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 36 below minimum 60</td></tr><tr class=""><td><span class="local-time" data-utc="2026-09-14T21:13:50+00:00">2026-09-14T21:13:50+00:00 UTC</span></td><td>BTC/USD</td><td>BUY</td><td>skipped</td><td></td><td>confidence 35 below minimum 60</td></tr></tbody></table></div>
+    </section>
+  </div>
+
+  <div class="tab-panel" id="tab-kraken">
+    <p class="subtitle">
+      Sibling bot's own live dashboard, embedded directly from its own GitHub Pages site
+      (<a href="https://wheresej2k.github.io/crypto-mean-reversion-agent/" target="_blank" rel="noopener">open in a new tab</a>).
+    </p>
+    <iframe src="https://wheresej2k.github.io/crypto-mean-reversion-agent/" loading="lazy" title="Mean-reversion bot dashboard"></iframe>
+  </div>
+
+  <footer>
+    Source: <a href="https://github.com/wheresej2k/crypto-trading-agent">github.com/wheresej2k/crypto-trading-agent</a>
+    - built with plain Python by GitHub Actions, no Claude session involved in generating this page.
+  </footer>
+</div>
+<script>
+  document.querySelectorAll('.local-time').forEach(function(el) {
+    var iso = el.getAttribute('data-utc');
+    if (!iso) return;
+    var d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+    if (isNaN(d.getTime())) return;
+    el.textContent = d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

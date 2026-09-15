@@ -46,6 +46,12 @@ jobs:
       - name: Run trading bot
         run: python trader.py
 
+      - name: Rebuild the static dashboard (docs/index.html, served by GitHub Pages)
+        # Reads live Alpaca account/position state, so it needs the same API keys as trader.py.
+        # Runs even if trader.py's own run had issues - a stale-but-present dashboard beats none.
+        if: always()
+        run: python build_dashboard.py
+
       - name: Check if it's time for the once-a-day summary text
         id: check_hour
         run: |
@@ -78,7 +84,7 @@ jobs:
           # logs/*.csv is gitignored (keeps local dry-run test logs out of git on your own
           # machine) - -f explicitly overrides that just for the real trade log. state/ files
           # aren't gitignored but may not exist yet on a brand-new repo's first run.
-          for f in logs/trade_log.csv state/open_brackets.json state/last_success.json; do
+          for f in logs/trade_log.csv state/open_brackets.json state/last_success.json docs/index.html; do
             if [ -f "$f" ]; then
               git add -f "$f"
             fi
