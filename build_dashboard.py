@@ -331,7 +331,6 @@ def main():
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="alpaca">Trend-Following (Alpaca)</button>
-    <button class="tab-btn" data-tab="last-trade">Last Trade</button>
     <a class="tab-btn" href="{SIBLING_DASHBOARD_URL}" target="_top">Mean-Reversion (Kraken)</a>
   </div>
 
