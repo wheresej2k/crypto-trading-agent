@@ -302,6 +302,9 @@ def main():
   .card {{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }}
   .card .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }}
   .card .value {{ font-size: 22px; font-weight: 600; margin-top: 4px; }}
+  .card.clickable {{ cursor: pointer; }}
+  .card.clickable:hover, .card.clickable:focus-visible {{ border-color: var(--accent); }}
+  .card .card-hint {{ color: var(--accent); font-size: 12px; margin-top: 4px; }}
   .pos {{ color: var(--green); }} .neg {{ color: var(--red); }}
   section {{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }}
   section h2 {{ font-size: 15px; margin: 0 0 12px; }}
@@ -350,7 +353,11 @@ def main():
       <div class="card"><div class="label">Today's P/L</div><div class="value {'pos' if day_pl_usd >= 0 else 'neg'}">{fmt_pct(day_pl_pct)}</div></div>
       <div class="card"><div class="label">All-time P/L</div><div class="value {'pos' if all_time_usd >= 0 else 'neg'}">{fmt_pct(all_time_pct)}</div></div>
       <div class="card"><div class="label">Open positions</div><div class="value">{len(positions)}</div></div>
-      <div class="card"><div class="label">Completed runs</div><div class="value">{last_success.get('run_count', 'n/a')}</div></div>
+      <div class="card clickable" id="card-completed-runs" role="button" tabindex="0">
+        <div class="label">Completed runs</div>
+        <div class="value">{last_success.get('run_count', 'n/a')}</div>
+        <div class="card-hint">View trades &rarr;</div>
+      </div>
     </div>
 
     <section>
@@ -429,14 +436,28 @@ def main():
     }});
   }});
 
+  function activateTab(name) {{
+    document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.toggle('active', b.dataset.tab === name); }});
+    document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.classList.toggle('active', p.id === 'tab-' + name); }});
+  }}
+
   document.querySelectorAll('.tab-btn').forEach(function(btn) {{
-    btn.addEventListener('click', function() {{
-      document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
-      document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.classList.remove('active'); }});
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    }});
+    btn.addEventListener('click', function() {{ activateTab(btn.dataset.tab); }});
   }});
+
+  var completedRunsCard = document.getElementById('card-completed-runs');
+  if (completedRunsCard) {{
+    completedRunsCard.addEventListener('click', function() {{
+      activateTab('last-trade');
+      document.querySelector('.tabs').scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    }});
+    completedRunsCard.addEventListener('keydown', function(e) {{
+      if (e.key === 'Enter' || e.key === ' ') {{
+        e.preventDefault();
+        completedRunsCard.click();
+      }}
+    }});
+  }}
 </script>
 </body>
 </html>
