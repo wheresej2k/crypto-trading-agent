@@ -8,12 +8,8 @@ was out of Claude usage, since running that routine at all required Claude. Noth
 or in GitHub Pages hosting depends on Claude in any way: GitHub Actions builds this file with plain
 Python, and GitHub Pages serves the static result, both for free, indefinitely.
 
-The page has two tabs: this bot's own live data (rendered natively, straight from this repo's own
-state), and the sibling mean-reversion bot's dashboard (embedded via iframe from its own already-
-live GitHub Pages URL - wheresej2k.github.io/crypto-mean-reversion-agent/). Embedding via iframe
-instead of fetching/re-rendering its data here means neither bot's workflow ever needs credentials
-or write access to the other's repo - each just builds and hosts its own page, and links to the
-other's.
+The dashboard renders this bot locally and links directly to the sibling dashboard.
+Exchange navigation replaces the page instead of recursively embedding dashboards.
 
 Usage:
     python build_dashboard.py
@@ -293,7 +289,7 @@ def main():
   .tabs {{ display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }}
   .tab-btn {{
     background: none; border: none; color: var(--muted); font: inherit; font-weight: 600;
-    padding: 10px 4px; margin-right: 16px; cursor: pointer; border-bottom: 2px solid transparent;
+    text-decoration: none; padding: 10px 4px; margin-right: 16px; cursor: pointer; border-bottom: 2px solid transparent;
   }}
   .tab-btn.active {{ color: var(--text); border-bottom-color: var(--accent); }}
   .tab-panel {{ display: none; }}
@@ -322,7 +318,6 @@ def main():
   footer {{ text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; }}
   a {{ color: var(--accent); }}
   code {{ background: var(--border); padding: 1px 5px; border-radius: 4px; font-size: 12px; }}
-  iframe {{ width: 100%; height: 1700px; border: 0; border-radius: 10px; }}
 </style>
 </head>
 <body>
@@ -337,7 +332,7 @@ def main():
   <div class="tabs">
     <button class="tab-btn active" data-tab="alpaca">Trend-Following (Alpaca)</button>
     <button class="tab-btn" data-tab="last-trade">Last Trade</button>
-    <button class="tab-btn" data-tab="kraken">Mean-Reversion (Kraken)</button>
+    <a class="tab-btn" href="{SIBLING_DASHBOARD_URL}" target="_top">Mean-Reversion (Kraken)</a>
   </div>
 
   <div class="tab-panel active" id="tab-alpaca">
@@ -412,13 +407,7 @@ def main():
     </section>
   </div>
 
-  <div class="tab-panel" id="tab-kraken">
-    <p class="subtitle">
-      Sibling bot's own live dashboard, embedded directly from its own GitHub Pages site
-      (<a href="{SIBLING_DASHBOARD_URL}" target="_blank" rel="noopener">open in a new tab</a>).
-    </p>
-    <iframe src="{SIBLING_DASHBOARD_URL}" loading="lazy" title="Mean-reversion bot dashboard"></iframe>
-  </div>
+
 
   <footer>
     Source: <a href="https://github.com/wheresej2k/crypto-trading-agent">github.com/wheresej2k/crypto-trading-agent</a>
@@ -437,11 +426,11 @@ def main():
   }});
 
   function activateTab(name) {{
-    document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.toggle('active', b.dataset.tab === name); }});
+    document.querySelectorAll('button.tab-btn').forEach(function(b) {{ b.classList.toggle('active', b.dataset.tab === name); }});
     document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.classList.toggle('active', p.id === 'tab-' + name); }});
   }}
 
-  document.querySelectorAll('.tab-btn').forEach(function(btn) {{
+  document.querySelectorAll('button.tab-btn').forEach(function(btn) {{
     btn.addEventListener('click', function() {{ activateTab(btn.dataset.tab); }});
   }});
 
