@@ -56,6 +56,22 @@ def load_recent_log_rows(path, limit):
     return list(reversed(rows[-limit:]))
 
 
+def load_all_log_rows(path):
+    if not path.exists():
+        return []
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def find_matching_buy(all_rows, trade_id):
+    if not trade_id:
+        return None
+    for r in all_rows:
+        if r.get("trade_id") == trade_id and r.get("action") == "BUY" and r.get("status") == "executed":
+            return r
+    return None
+
+
 def fmt_money(v):
     return f"${v:,.2f}"
 
@@ -103,6 +119,100 @@ def build_positions_table(positions):
     )
 
 
+def build_last_trade_card(all_rows, positions):
+    executed = [r for r in all_rows if r.get("status") == "executed" and r.get("action") in ("BUY", "SELL", "CLOSE")]
+    if not executed:
+        return "<p class=\"muted\">No trade has been executed yet - every run so far has held or been skipped by the confidence/risk filters.</p>"
+
+    last = executed[-1]
+    symbol = last.get("symbol")
+    action = last.get("action")
+    when = utc_span(last.get("timestamp_utc"))
+
+    if action == "CLOSE":
+        buy = find_matching_buy(all_rows, last.get("trade_id"))
+        pl_pct = float(last["pl_pct"]) if last.get("pl_pct") else None
+        notional = float(buy["amount"]) if buy and buy.get("amount") else None
+        dollar_pl = notional * pl_pct / 100 if notional is not None and pl_pct is not None else None
+        pl_class = "pos" if (pl_pct or 0) >= 0 else "neg"
+        entry_price = float(last["entry_price"]) if last.get("entry_price") else None
+        exit_price = float(last["exit_price"]) if last.get("exit_price") else None
+        return (
+            "<div class=\"cards\">"
+            f"<div class=\"card\"><div class=\"label\">Symbol</div><div class=\"value\">{esc(symbol)}</div></div>"
+            f"<div class=\"card\"><div class=\"label\">Exit reason</div><div class=\"value\">{esc(last.get('exit_reason'))}</div></div>"
+            f"<div class=\"card\"><div class=\"label\">P/L %</div><div class=\"value {pl_class}\">{fmt_pct(pl_pct)}</div></div>"
+            f"<div class=\"card\"><div class=\"label\">P/L $</div><div class=\"value {pl_class}\">{fmt_money(dollar_pl) if dollar_pl is not None else 'n/a'}</div></div>"
+            "</div>"
+            f"<p class=\"muted\">Closed {when} - entry {fmt_money(entry_price) if entry_price is not None else 'n/a'}, "
+            f"exit {fmt_money(exit_price) if exit_price is not None else 'n/a'}.</p>"
+        )
+
+    if action == "BUY":
+        pos = positions.get(symbol)
+        amount = last.get("amount")
+        if pos:
+            dollar_pl = pos.market_value - (pos.qty * pos.avg_entry_price)
+            pl_class = "pos" if dollar_pl >= 0 else "neg"
+            return (
+                "<div class=\"cards\">"
+                f"<div class=\"card\"><div class=\"label\">Symbol</div><div class=\"value\">{esc(symbol)}</div></div>"
+                "<div class=\"card\"><div class=\"label\">Status</div><div class=\"value\">Open</div></div>"
+                f"<div class=\"card\"><div class=\"label\">Unrealized P/L %</div><div class=\"value {pl_class}\">{fmt_pct(pos.unrealized_plpc)}</div></div>"
+                f"<div class=\"card\"><div class=\"label\">Unrealized P/L $</div><div class=\"value {pl_class}\">{fmt_money(dollar_pl)}</div></div>"
+                "</div>"
+                f"<p class=\"muted\">Bought {when} for {fmt_money(float(amount)) if amount else 'n/a'} - still open, "
+                "protected by a live stop-loss/take-profit bracket.</p>"
+            )
+        return (
+            f"<p class=\"muted\">Bought {esc(symbol)} {when} for {fmt_money(float(amount)) if amount else 'n/a'} - "
+            "no longer showing as an open position (see Realized trades below for how it closed).</p>"
+        )
+
+    return (
+        f"<p class=\"muted\">Sold {esc(symbol)} {when} (qty {esc(last.get('amount'))}) - {esc(last.get('reasoning'))}</p>"
+    )
+
+
+def build_realized_trades_table(all_rows):
+    closed = [r for r in all_rows if r.get("action") == "CLOSE" and r.get("status") == "executed"]
+    if not closed:
+        return "<p class=\"muted\">No trades have closed yet.</p>", 0.0, 0, 0
+
+    rows_html = []
+    total_usd = 0.0
+    win_count = 0
+    for r in reversed(closed):
+        buy = find_matching_buy(all_rows, r.get("trade_id"))
+        pl_pct = float(r["pl_pct"]) if r.get("pl_pct") else None
+        notional = float(buy["amount"]) if buy and buy.get("amount") else None
+        dollar_pl = notional * pl_pct / 100 if notional is not None and pl_pct is not None else None
+        entry_price = float(r["entry_price"]) if r.get("entry_price") else None
+        exit_price = float(r["exit_price"]) if r.get("exit_price") else None
+        if dollar_pl is not None:
+            total_usd += dollar_pl
+        if pl_pct is not None and pl_pct > 0:
+            win_count += 1
+        pl_class = "pos" if (pl_pct or 0) >= 0 else "neg"
+        rows_html.append(
+            "<tr>"
+            f"<td>{utc_span(r.get('timestamp_utc'))}</td>"
+            f"<td>{esc(r.get('symbol'))}</td>"
+            f"<td>{esc(r.get('exit_reason'))}</td>"
+            f"<td>{fmt_money(entry_price) if entry_price is not None else 'n/a'}</td>"
+            f"<td>{fmt_money(exit_price) if exit_price is not None else 'n/a'}</td>"
+            f"<td class=\"{pl_class}\">{fmt_pct(pl_pct) if pl_pct is not None else 'n/a'}</td>"
+            f"<td class=\"{pl_class}\">{fmt_money(dollar_pl) if dollar_pl is not None else 'n/a'}</td>"
+            "</tr>"
+        )
+    table = (
+        "<div class=\"table-scroll\"><table><thead><tr><th>Time</th><th>Symbol</th><th>Exit reason</th>"
+        "<th>Entry</th><th>Exit</th><th>P/L %</th><th>P/L $</th></tr></thead>"
+        f"<tbody>{''.join(rows_html)}</tbody></table></div>"
+    )
+    return table, total_usd, len(closed), win_count
+
+
 def build_log_table(rows):
     if not rows:
         return "<p class=\"muted\">No trade log entries yet.</p>"
@@ -146,6 +256,11 @@ def main():
     last_success = load_json(STATE_DIR / "last_success.json") or {}
     params = load_json(PARAMS_PATH) or {}
     log_rows = load_recent_log_rows(LOG_PATH, MAX_LOG_ROWS)
+    all_log_rows = load_all_log_rows(LOG_PATH)
+
+    last_trade_card = build_last_trade_card(all_log_rows, positions)
+    realized_table, total_realized_usd, closed_count, win_count = build_realized_trades_table(all_log_rows)
+    win_rate = (win_count / closed_count * 100) if closed_count else None
 
     hours_since = hours_since_last_success()
     hours_since_str = f"{hours_since:.1f}h ago" if hours_since is not None else "unknown"
@@ -187,6 +302,9 @@ def main():
   .card {{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }}
   .card .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }}
   .card .value {{ font-size: 22px; font-weight: 600; margin-top: 4px; }}
+  .card.clickable {{ cursor: pointer; }}
+  .card.clickable:hover, .card.clickable:focus-visible {{ border-color: var(--accent); }}
+  .card .card-hint {{ color: var(--accent); font-size: 12px; margin-top: 4px; }}
   .pos {{ color: var(--green); }} .neg {{ color: var(--red); }}
   section {{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }}
   section h2 {{ font-size: 15px; margin: 0 0 12px; }}
@@ -218,6 +336,7 @@ def main():
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="alpaca">Trend-Following (Alpaca)</button>
+    <button class="tab-btn" data-tab="last-trade">Last Trade</button>
     <button class="tab-btn" data-tab="kraken">Mean-Reversion (Kraken)</button>
   </div>
 
@@ -234,7 +353,11 @@ def main():
       <div class="card"><div class="label">Today's P/L</div><div class="value {'pos' if day_pl_usd >= 0 else 'neg'}">{fmt_pct(day_pl_pct)}</div></div>
       <div class="card"><div class="label">All-time P/L</div><div class="value {'pos' if all_time_usd >= 0 else 'neg'}">{fmt_pct(all_time_pct)}</div></div>
       <div class="card"><div class="label">Open positions</div><div class="value">{len(positions)}</div></div>
-      <div class="card"><div class="label">Completed runs</div><div class="value">{last_success.get('run_count', 'n/a')}</div></div>
+      <div class="card clickable" id="card-completed-runs" role="button" tabindex="0">
+        <div class="label">Completed runs</div>
+        <div class="value">{last_success.get('run_count', 'n/a')}</div>
+        <div class="card-hint">View trades &rarr;</div>
+      </div>
     </div>
 
     <section>
@@ -267,6 +390,28 @@ def main():
     </section>
   </div>
 
+  <div class="tab-panel" id="tab-last-trade">
+    <p class="subtitle">
+      Did the bot actually take a trade, and how did it turn out - pulled straight out of the full
+      run-by-run log below, since most runs just hold or get filtered out.
+    </p>
+
+    <section>
+      <h2>Last trade taken</h2>
+      {last_trade_card}
+    </section>
+
+    <section>
+      <h2>Realized P/L (closed trades)</h2>
+      <div class="cards">
+        <div class="card"><div class="label">Closed trades</div><div class="value">{closed_count}</div></div>
+        <div class="card"><div class="label">Win rate</div><div class="value">{f'{win_rate:.0f}%' if win_rate is not None else 'n/a'}</div></div>
+        <div class="card"><div class="label">Total realized P/L</div><div class="value {'pos' if total_realized_usd >= 0 else 'neg'}">{fmt_money(total_realized_usd)}</div></div>
+      </div>
+      {realized_table}
+    </section>
+  </div>
+
   <div class="tab-panel" id="tab-kraken">
     <p class="subtitle">
       Sibling bot's own live dashboard, embedded directly from its own GitHub Pages site
@@ -291,14 +436,28 @@ def main():
     }});
   }});
 
+  function activateTab(name) {{
+    document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.toggle('active', b.dataset.tab === name); }});
+    document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.classList.toggle('active', p.id === 'tab-' + name); }});
+  }}
+
   document.querySelectorAll('.tab-btn').forEach(function(btn) {{
-    btn.addEventListener('click', function() {{
-      document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
-      document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.classList.remove('active'); }});
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    }});
+    btn.addEventListener('click', function() {{ activateTab(btn.dataset.tab); }});
   }});
+
+  var completedRunsCard = document.getElementById('card-completed-runs');
+  if (completedRunsCard) {{
+    completedRunsCard.addEventListener('click', function() {{
+      activateTab('last-trade');
+      document.querySelector('.tabs').scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    }});
+    completedRunsCard.addEventListener('keydown', function(e) {{
+      if (e.key === 'Enter' || e.key === ' ') {{
+        e.preventDefault();
+        completedRunsCard.click();
+      }}
+    }});
+  }}
 </script>
 </body>
 </html>
