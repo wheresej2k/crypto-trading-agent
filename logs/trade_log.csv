@@ -389,3 +389,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-18T04:33:22+00:00,SOL/USD,BUY,skipped,,,confidence 58 below minimum 65,,,,,,,,
 2026-09-18T04:33:22+00:00,LINK/USD,HOLD,skipped,,,"4h avg is 2.63% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
 2026-09-18T04:33:22+00:00,DOGE/USD,HOLD,skipped,,,"4h avg is 1.97% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-09-18T05:00:46+00:00,BTC/USD,HOLD,skipped,,,"4h avg is 0.68% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-09-18T05:00:46+00:00,ETH/USD,BUY,skipped,,,confidence 16 below minimum 65,,,,,,,,
+2026-09-18T05:00:46+00:00,SOL/USD,BUY,skipped,,,confidence 65 below minimum 65,,,,,,,,
+2026-09-18T05:00:46+00:00,DOGE/USD,HOLD,skipped,,,"4h avg is 2.15% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-09-18T05:00:52+00:00,LINK/USD,BUY,failed,15000.0,71.8029654506182,"4h avg ($11.6605) is 2.87% above 24h avg ($11.3350) - bullish crossover, price above the long-term trend filter | ERROR: {""available"":""1245.573375821"",""balance"":""1245.573375821"",""code"":40310000,""message"":""insufficient balance for LINK (requested: 1248.695113606, available: 1245.573375821)"",""symbol"":""USD""}",11.660538,11.334983,,,,,,
