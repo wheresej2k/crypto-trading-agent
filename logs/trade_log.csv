@@ -439,3 +439,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-18T13:00:46+00:00,LINK/USD,BUY,skipped,,,confidence 64 below minimum 65,,,,,,,,
 2026-09-18T13:00:46+00:00,DOGE/USD,HOLD,skipped,,,"4h avg is 2.96% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
 2026-09-18T13:00:52+00:00,SOL/USD,BUY,failed,14972.74,68.32340943330368,"4h avg ($105.9749) is 2.73% above 24h avg ($103.1557) - bullish crossover, price above the long-term trend filter | ERROR: {""code"":40310000,""existing_order_id"":""16e278de-b6db-4c3d-bfd3-ccd2e0b82a23"",""message"":""potential wash trade detected. use complex orders"",""reject_reason"":""opposite side limit order exists. use complex/limit/stop_limit orders""}",105.974875,103.155695,,,,,,
+2026-09-18T14:01:00+00:00,BTC/USD,BUY,skipped,,,confidence 43 below minimum 65,,,,,,,,
+2026-09-18T14:01:00+00:00,ETH/USD,BUY,skipped,,,confidence 43 below minimum 65,,,,,,,,
+2026-09-18T14:01:00+00:00,LINK/USD,BUY,skipped,,,confidence 64 below minimum 65,,,,,,,,
+2026-09-18T14:01:00+00:00,DOGE/USD,BUY,skipped,,,position already open and protected - not adding to it,,,,,,,,
+2026-09-18T14:01:06+00:00,SOL/USD,BUY,failed,15166.54,72.97473575790686,"4h avg ($106.5007) is 2.92% above 24h avg ($103.4802) - bullish crossover, price above the long-term trend filter | ERROR: {""code"":40310000,""existing_order_id"":""16e278de-b6db-4c3d-bfd3-ccd2e0b82a23"",""message"":""potential wash trade detected. use complex orders"",""reject_reason"":""opposite side limit order exists. use complex/limit/stop_limit orders""}",106.50075,103.480175,,,,,,
