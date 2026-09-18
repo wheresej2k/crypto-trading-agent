@@ -9,5 +9,16 @@
     "stop_order_id": "f31dea42-b679-469d-9253-11922286ec20",
     "target_order_id": "26753347-b5ff-499e-ae72-13786da0bd56",
     "opened_at": "2026-09-18T11:01:02.545576+00:00"
+  },
+  "BTC/USD": {
+    "trade_id": "d8a4edc2",
+    "symbol": "BTC/USD",
+    "qty": 0.007115754,
+    "entry_price": 80850.577,
+    "stop_price": 66297.47314,
+    "target_price": 87318.62316000002,
+    "stop_order_id": "7ce83152-e9c7-47cb-ba8f-ed126d2b97b0",
+    "target_order_id": "4396cf86-71d4-4cb1-b54d-31cb1084dcc2",
+    "opened_at": "2026-09-18T17:00:57.041502+00:00"
   }
 }
