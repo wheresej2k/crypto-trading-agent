@@ -504,3 +504,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-18T23:00:43+00:00,LINK/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
 2026-09-18T23:00:43+00:00,DOGE/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
 2026-09-18T23:00:43+00:00,BTC/USD,BUY,skipped,,,position already open and protected - not adding to it,,,,,,,,
+2026-09-19T00:00:49+00:00,BTC/USD,BUY,skipped,,,confidence 63 below minimum 65,,,,,,,,
+2026-09-19T00:00:49+00:00,SOL/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
+2026-09-19T00:00:49+00:00,LINK/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
+2026-09-19T00:00:49+00:00,DOGE/USD,BUY,skipped,,,confidence 63 below minimum 65,,,,,,,,
+2026-09-19T00:00:49+00:00,ETH/USD,BUY,executed,11.38,81.67280299829606,"4h avg ($2622.5593) is 3.27% above 24h avg ($2539.5930) - bullish crossover, price above the long-term trend filter",2622.55925,2539.592979,47a23241-6f42-4d9f-8d7c-ba2aabcc41c9,4f689246,,,,

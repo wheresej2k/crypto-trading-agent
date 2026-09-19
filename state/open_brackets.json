@@ -20,5 +20,16 @@
     "stop_order_id": "7ce83152-e9c7-47cb-ba8f-ed126d2b97b0",
     "target_order_id": "4396cf86-71d4-4cb1-b54d-31cb1084dcc2",
     "opened_at": "2026-09-18T17:00:57.041502+00:00"
+  },
+  "ETH/USD": {
+    "trade_id": "4f689246",
+    "symbol": "ETH/USD",
+    "qty": 0.00427259,
+    "entry_price": 2612.125,
+    "stop_price": 2141.9425,
+    "target_price": 2821.0950000000003,
+    "stop_order_id": "47a23241-6f42-4d9f-8d7c-ba2aabcc41c9",
+    "target_order_id": "a4dba3ea-0089-4d69-aaa1-92db35f23083",
+    "opened_at": "2026-09-19T00:00:49.674761+00:00"
   }
 }
