@@ -534,3 +534,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-19T04:00:50+00:00,SOL/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
 2026-09-19T04:00:50+00:00,LINK/USD,BUY,skipped,,,confidence 60 below minimum 65,,,,,,,,
 2026-09-19T04:00:50+00:00,DOGE/USD,BUY,skipped,,,confidence 38 below minimum 65,,,,,,,,
+2026-09-19T05:00:47+00:00,BTC/USD,BUY,skipped,,,confidence 37 below minimum 65,,,,,,,,
+2026-09-19T05:00:47+00:00,ETH/USD,BUY,skipped,,,confidence 45 below minimum 65,,,,,,,,
+2026-09-19T05:00:47+00:00,SOL/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
+2026-09-19T05:00:47+00:00,LINK/USD,BUY,skipped,,,confidence 53 below minimum 65,,,,,,,,
+2026-09-19T05:00:47+00:00,DOGE/USD,BUY,skipped,,,confidence 31 below minimum 65,,,,,,,,
