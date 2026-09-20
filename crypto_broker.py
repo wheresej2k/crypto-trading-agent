@@ -18,6 +18,8 @@ from alpaca.data.historical import CryptoHistoricalDataClient
 from alpaca.data.requests import CryptoBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
+from alpaca.trading.enums import QueryOrderStatus
+from alpaca.trading.requests import GetOrdersRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest, StopLimitOrderRequest
 
@@ -164,6 +166,42 @@ class CryptoBroker:
             time_in_force=TimeInForce.GTC,
         )
         return self.trading.submit_order(order)
+
+    @retry(times=3, base_delay=2.0)
+    def cancel_open_orders_for(self, symbol: str) -> int:
+        """Cancel EVERY resting order on `symbol`, not just the ones tracked in open_brackets.json.
+
+        A resting stop/limit sell reserves the position's quantity on Alpaca's side, so a
+        signal-driven market sell is rejected with "insufficient balance" while it exists. The
+        bracket tracker only knows about orders it recorded - state/open_brackets.json had lost
+        LINK and SOL, yet both still had live stop-limit orders holding half the position, so both
+        exits failed. Asking Alpaca directly is the only reliable source.
+        """
+        request = GetOrdersRequest(status=QueryOrderStatus.OPEN)
+        cancelled = 0
+        for order in self.trading.get_orders(request):
+            if self._normalize_crypto_symbol(order.symbol) != symbol:
+                continue
+            try:
+                self.trading.cancel_order_by_id(order.id)
+                cancelled += 1
+            except Exception as e:
+                print(f"    WARNING: could not cancel {order.id} on {symbol}: {e}")
+        return cancelled
+
+    def available_qty(self, symbol: str) -> str | None:
+        """The exact quantity Alpaca says is free to sell, as the STRING Alpaca reported.
+
+        Returned verbatim rather than as a float because the bot's previous
+        `round(pos.qty * pct / 100, 8)` rounded UP past the real balance - it asked to sell
+        0.19315998 BTC while holding 0.193159976, and Alpaca rejected the whole order. Passing
+        Alpaca's own string back to Alpaca cannot round in the wrong direction.
+        """
+        for p in self.trading.get_all_positions():
+            if self._normalize_crypto_symbol(p.symbol) != symbol:
+                continue
+            return str(getattr(p, "qty_available", None) or p.qty)
+        return None
 
     @retry(times=3, base_delay=2.0)
     def place_stop_loss(self, symbol: str, qty: float, stop_price: float, client_order_id: str):

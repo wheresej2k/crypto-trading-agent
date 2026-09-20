@@ -107,17 +107,29 @@ def main():
     for sell in approved_sells:
         print(f"  SELL  {sell.symbol:10s} qty={sell.qty} (confidence {sell.confidence:.0f}) - {sell.reasoning}")
         if args.dry_run:
-            log_row(sell.symbol, "SELL", "dry-run", amount=sell.qty, confidence=sell.confidence, reasoning=sell.reasoning)
+            # A --dry-run must not write to the real trade log: that log is the record the
+            # strategy gets reviewed against, so local test runs mixed into it corrupt it.
             continue
         try:
             # Cancel any resting stop/target orders FIRST - they reserve qty on Alpaca's side, so
             # a sell would otherwise be rejected for insufficient available quantity.
             brackets, closed_bracket = cancel_bracket(broker, brackets, sell.symbol)
-            order = broker.sell_qty(sell.symbol, sell.qty)
+            # ...then sweep up any resting order the bracket tracker had lost. state/
+            # open_brackets.json had no entry for LINK or SOL, yet both still had live stop-limit
+            # sells holding half the position, and both exits failed with "insufficient balance".
+            swept = broker.cancel_open_orders_for(sell.symbol)
+            if swept:
+                print(f"    cancelled {swept} untracked resting order(s) on {sell.symbol}")
+
+            # Sell exactly what Alpaca says is available, using Alpaca's own string. The previous
+            # round(qty, 8) rounded UP past the real balance (asked for 0.19315998 BTC while
+            # holding 0.193159976) and the whole order was rejected.
+            qty = broker.available_qty(sell.symbol) or sell.qty
+            order = broker.sell_qty(sell.symbol, qty)
             filled = wait_for_fill(broker, order.id)
             fill_price = float(filled.filled_avg_price) if filled else None
 
-            log_row(sell.symbol, "SELL", "executed", amount=sell.qty, confidence=sell.confidence,
+            log_row(sell.symbol, "SELL", "executed", amount=qty, confidence=sell.confidence,
                     reasoning=sell.reasoning, order_id=str(order.id))
             if closed_bracket and fill_price is not None:
                 log_close_event(build_close_event(closed_bracket, "signal_exit", fill_price))
