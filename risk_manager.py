@@ -62,7 +62,14 @@ def evaluate_decisions(
             skipped.append(SkippedDecision(d.symbol, d.action, d.reasoning))
             continue
 
-        if d.confidence < settings.min_confidence:
+        # min_confidence is an ENTRY filter and must never gate an exit. Confidence here scales
+        # with the size of the SMA spread, and a crossover is by definition the moment the spread
+        # passes through zero - so a freshly-turned trend produces a near-zero confidence SELL.
+        # Gating exits on it blocked every exit at exactly the moment it was needed: with five
+        # open positions all signalling SELL, confidences were 2, 6, 13, 19 and 21 against a
+        # minimum of 65, so the bot held every losing trend to its stop instead of exiting.
+        # Same defect, same fix as the Kraken sibling bot's risk_manager.
+        if d.action == "BUY" and d.confidence < settings.min_confidence:
             skipped.append(
                 SkippedDecision(
                     d.symbol, d.action, f"confidence {d.confidence:.0f} below minimum {settings.min_confidence:.0f}"

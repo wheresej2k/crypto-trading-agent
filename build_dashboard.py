@@ -97,7 +97,11 @@ def build_positions_table(positions):
         return "<p class=\"muted\">No open positions.</p>"
     rows = []
     for symbol, pos in sorted(positions.items()):
-        pl_pct = pos.unrealized_plpc * 100
+        # PositionSnapshot.unrealized_plpc is ALREADY a percentage (crypto_broker converts
+        # Alpaca's fraction, and backtest.py builds it the same way). Multiplying again rendered
+        # a +1.76% DOGE position as +175.80%. This went unnoticed because the position-visibility
+        # bug meant this table was always empty.
+        pl_pct = pos.unrealized_plpc
         pl_class = "pos" if pl_pct >= 0 else "neg"
         rows.append(
             "<tr>"

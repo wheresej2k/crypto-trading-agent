@@ -75,18 +75,51 @@ class CryptoBroker:
             last_equity=float(acct.last_equity),
         )
 
+    # Alpaca's market-data API names crypto "BASE/QUOTE" (BTC/USD) but the TRADING API returns
+    # open positions with the slash stripped (BTCUSD). Longest-first so USDT/USDC are matched
+    # before the USD prefix of their own names.
+    QUOTE_CURRENCIES = ("USDT", "USDC", "USD", "BTC", "ETH")
+
+    @classmethod
+    def _normalize_crypto_symbol(cls, symbol: str) -> str | None:
+        """Turn a trading-API crypto symbol into this project's "BASE/QUOTE" form.
+
+        Returns None if it cannot be parsed, so an unrecognised symbol is dropped rather than
+        silently mis-keyed - a position filed under the wrong key is invisible to the risk math,
+        which is the exact failure this function exists to fix.
+        """
+        if "/" in symbol:
+            return symbol
+        for quote in cls.QUOTE_CURRENCIES:
+            if symbol.endswith(quote) and len(symbol) > len(quote):
+                return f"{symbol[:-len(quote)]}/{quote}"
+        return None
+
     @retry(times=3, base_delay=2.0)
     def get_positions(self) -> dict[str, PositionSnapshot]:
         positions = {}
         for p in self.trading.get_all_positions():
-            if "/" not in p.symbol:
-                # Not a crypto position - Alpaca's account-level position list includes every
-                # asset class. If this same paper account is ALSO used by a stock bot (a plain
-                # ticker like "AAPL" has no slash), its holdings must never leak into this bot's
-                # exposure/risk math - crypto symbols are always "BASE/QUOTE" (e.g. "BTC/USD").
+            # Alpaca's account-level position list includes every asset class. If this same paper
+            # account is ALSO used by a stock bot, its holdings must never leak into this bot's
+            # exposure/risk math - so select crypto explicitly by asset class.
+            #
+            # This used to test `"/" not in p.symbol` and skip, on the assumption that crypto
+            # always carries a slash. The trading API strips it, so that test dropped EVERY
+            # crypto position: the bot saw an empty book, could never mark `has_position` True
+            # (so strategy.py's SELL branch could never fire), and computed 0% exposure no matter
+            # how much it held - which let it breach both the per-position and total exposure
+            # caps.
+            asset_class = getattr(p, "asset_class", None)
+            if asset_class is not None and str(asset_class).upper().endswith("CRYPTO"):
+                symbol = self._normalize_crypto_symbol(p.symbol)
+            elif "/" in p.symbol:
+                symbol = p.symbol
+            else:
                 continue
-            positions[p.symbol] = PositionSnapshot(
-                symbol=p.symbol,
+            if symbol is None:
+                continue
+            positions[symbol] = PositionSnapshot(
+                symbol=symbol,
                 qty=float(p.qty),
                 market_value=float(p.market_value),
                 avg_entry_price=float(p.avg_entry_price),
