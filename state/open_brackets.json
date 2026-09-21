@@ -9,5 +9,16 @@
     "stop_order_id": "d227e048-e476-4f00-9a7e-eb3d65022854",
     "target_order_id": "3a45ab84-03fc-4d82-bd50-f2bb421f9e7a",
     "opened_at": "2026-09-21T10:00:57.936581+00:00"
+  },
+  "SOL/USD": {
+    "trade_id": "b2e825b6",
+    "symbol": "SOL/USD",
+    "qty": 3.128983266,
+    "entry_price": 115.647,
+    "stop_price": 94.83054000000001,
+    "target_price": 124.89876000000001,
+    "stop_order_id": "ceb7842f-b2a3-4ec0-a4c6-daf1556ef4e9",
+    "target_order_id": "4e89018e-e47d-4429-bdd9-0ed0cf302013",
+    "opened_at": "2026-09-21T10:35:08.536571+00:00"
   }
 }
