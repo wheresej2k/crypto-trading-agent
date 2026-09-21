@@ -911,3 +911,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-21T13:00:49+00:00,LINK/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
 2026-09-21T13:00:49+00:00,DOGE/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
 2026-09-21T13:00:49+00:00,BTC/USD,BUY,executed,294.99,88.76827156921568,"4h avg ($84808.6812) is 3.55% above 24h avg ($81900.6110) - bullish crossover, price above the long-term trend filter",84808.68125,81900.610979,eea21079-c237-4772-8723-8d782e000e65,508c343b,,,,
+2026-09-21T14:00:52+00:00,BTC/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-21T14:00:52+00:00,ETH/USD,BUY,skipped,,,confidence 60 below minimum 65,,,,,,,,
+2026-09-21T14:00:52+00:00,SOL/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-21T14:00:52+00:00,DOGE/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-21T14:00:52+00:00,LINK/USD,BUY,skipped,,,position already open and protected - not adding to it,,,,,,,,
