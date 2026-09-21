@@ -20,5 +20,16 @@
     "stop_order_id": "ceb7842f-b2a3-4ec0-a4c6-daf1556ef4e9",
     "target_order_id": "4e89018e-e47d-4429-bdd9-0ed0cf302013",
     "opened_at": "2026-09-21T10:35:08.536571+00:00"
+  },
+  "LINK/USD": {
+    "trade_id": "c9a1548a",
+    "symbol": "LINK/USD",
+    "qty": 1.500377911,
+    "entry_price": 13.058,
+    "stop_price": 10.70756,
+    "target_price": 14.102640000000001,
+    "stop_order_id": "3a22615d-da05-4c89-907b-8c24683e7a5b",
+    "target_order_id": "2d9e7c1b-3297-478a-93be-8b3f0bb930c8",
+    "opened_at": "2026-09-21T12:00:55.583792+00:00"
   }
 }

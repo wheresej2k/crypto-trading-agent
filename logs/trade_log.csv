@@ -901,3 +901,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-21T11:00:46+00:00,LINK/USD,BUY,skipped,,,position size rounds to under $1 after risk limits,,,,,,,,
 2026-09-21T11:00:46+00:00,DOGE/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
 2026-09-21T11:00:46+00:00,SOL/USD,BUY,skipped,,,position already open and protected - not adding to it,,,,,,,,
+2026-09-21T12:00:44+00:00,ETH/USD,BUY,skipped,,,confidence 61 below minimum 65,,,,,,,,
+2026-09-21T12:00:44+00:00,SOL/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-21T12:00:44+00:00,DOGE/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-21T12:00:55+00:00,BTC/USD,BUY,failed,15380.97,83.23047872729963,"4h avg ($84418.8475) is 3.33% above 24h avg ($81698.9117) - bullish crossover, price above the long-term trend filter | ERROR: {""available"":""0.177350485"",""balance"":""0.177350485"",""code"":40310000,""message"":""insufficient balance for BTC (requested: 0.177741517, available: 0.177350485)"",""symbol"":""USD""}",84418.8475,81698.911688,,,,,,
+2026-09-21T12:01:00+00:00,LINK/USD,BUY,executed,19.97,82.81903742281128,"4h avg ($12.9653) is 3.31% above 24h avg ($12.5496) - bullish crossover, price above the long-term trend filter",12.965338,12.549599,3a22615d-da05-4c89-907b-8c24683e7a5b,c9a1548a,,,,
