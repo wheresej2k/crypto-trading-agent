@@ -881,3 +881,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-21T08:00:46+00:00,SOL/USD,BUY,skipped,,,confidence 40 below minimum 65,,,,,,,,
 2026-09-21T08:00:46+00:00,LINK/USD,BUY,skipped,,,confidence 36 below minimum 65,,,,,,,,
 2026-09-21T08:00:46+00:00,DOGE/USD,BUY,skipped,,,confidence 56 below minimum 65,,,,,,,,
+2026-09-21T09:00:48+00:00,BTC/USD,BUY,skipped,,,confidence 30 below minimum 65,,,,,,,,
+2026-09-21T09:00:48+00:00,ETH/USD,BUY,skipped,,,confidence 37 below minimum 65,,,,,,,,
+2026-09-21T09:00:48+00:00,SOL/USD,BUY,skipped,,,confidence 56 below minimum 65,,,,,,,,
+2026-09-21T09:00:48+00:00,LINK/USD,BUY,skipped,,,confidence 38 below minimum 65,,,,,,,,
+2026-09-21T09:00:59+00:00,DOGE/USD,BUY,failed,15309.68,72.31751518143767,"4h avg ($0.0897) is 2.89% above 24h avg ($0.0872) - bullish crossover, price above the long-term trend filter | ERROR: {""available"":""163316.714113618"",""balance"":""163316.714113618"",""code"":40310000,""message"":""insufficient balance for DOGE (requested: 163676.803080395, available: 163316.714113618)"",""symbol"":""USD""}",0.089745,0.087222,,,,,,
