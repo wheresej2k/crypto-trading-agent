@@ -1,1 +1,13 @@
-{}
+{
+  "DOGE/USD": {
+    "trade_id": "ff038ab6",
+    "symbol": "DOGE/USD",
+    "qty": 3219.419033022,
+    "entry_price": 0.09205,
+    "stop_price": 0.075481,
+    "target_price": 0.09941400000000002,
+    "stop_order_id": "d227e048-e476-4f00-9a7e-eb3d65022854",
+    "target_order_id": "3a45ab84-03fc-4d82-bd50-f2bb421f9e7a",
+    "opened_at": "2026-09-21T10:00:57.936581+00:00"
+  }
+}
