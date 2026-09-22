@@ -1120,3 +1120,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-22T22:00:41+00:00,SOL/USD,BUY,skipped,,,confidence 13 below minimum 65,,,,,,,,
 2026-09-22T22:00:41+00:00,LINK/USD,HOLD,skipped,,,4h avg -0.22% vs 24h avg - no actionable signal,,,,,,,,
 2026-09-22T22:00:41+00:00,DOGE/USD,BUY,skipped,,,confidence 8 below minimum 65,,,,,,,,
+2026-09-22T23:00:43+00:00,BTC/USD,BUY,skipped,,,confidence 5 below minimum 65,,,,,,,,
+2026-09-22T23:00:43+00:00,ETH/USD,BUY,skipped,,,confidence 4 below minimum 65,,,,,,,,
+2026-09-22T23:00:43+00:00,SOL/USD,BUY,skipped,,,confidence 15 below minimum 65,,,,,,,,
+2026-09-22T23:00:43+00:00,LINK/USD,HOLD,skipped,,,4h avg -0.17% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-22T23:00:43+00:00,DOGE/USD,BUY,skipped,,,confidence 11 below minimum 65,,,,,,,,
