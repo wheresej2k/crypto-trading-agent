@@ -1019,3 +1019,9 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-22T06:00:49+00:00,SOL/USD,CLOSE,executed,,,,,,,b2e825b6,signal_exit,115.647,116.787483,0.99
 2026-09-22T06:00:50+00:00,LINK/USD,SELL,executed,1180.391589899,6.876027310506528,"4h avg ($12.9419) is 0.28% below 24h avg ($12.9776) - bearish crossover, exiting position",,,9da1d68b-3059-42db-b671-9f5e237503c2,,,,,
 2026-09-22T06:00:50+00:00,LINK/USD,CLOSE,executed,,,,,,,c9a1548a,signal_exit,13.058,12.873323,-1.41
+2026-09-22T07:00:55+00:00,ETH/USD,HOLD,skipped,,,4h avg -0.28% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-22T07:00:55+00:00,SOL/USD,HOLD,skipped,,,4h avg -0.52% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-22T07:00:55+00:00,LINK/USD,HOLD,skipped,,,4h avg -0.45% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-22T07:00:55+00:00,DOGE/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-22T07:00:56+00:00,BTC/USD,SELL,executed,0.180735,0.8812843617632751,"4h avg ($85467.2365) is 0.04% below 24h avg ($85497.3755) - bearish crossover, exiting position",,,112f2153-0c0a-472f-aa18-4c9fa39fed53,,,,,
+2026-09-22T07:00:56+00:00,BTC/USD,CLOSE,executed,,,,,,,508c343b,signal_exit,85313.009,85315.297836,0.0
