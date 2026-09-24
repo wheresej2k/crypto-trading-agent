@@ -9,5 +9,16 @@
     "stop_order_id": "52bdc2cd-c2e5-45d2-8114-e11eaf641dff",
     "target_order_id": "1e17885b-354d-4de4-a5cc-5c623cd4fd0d",
     "opened_at": "2026-09-24T18:01:05.412034+00:00"
+  },
+  "DOGE/USD": {
+    "trade_id": "e9d359d0",
+    "symbol": "DOGE/USD",
+    "qty": 4474.402280312,
+    "entry_price": 0.096647,
+    "stop_price": 0.07925054000000001,
+    "target_price": 0.10437876,
+    "stop_order_id": "c106bf2a-7356-433b-a829-778e08b084e7",
+    "target_order_id": "33717203-e402-48f9-9c9d-9b25703465c0",
+    "opened_at": "2026-09-24T19:01:08.561167+00:00"
   }
 }
