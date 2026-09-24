@@ -1381,3 +1381,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-24T18:01:05+00:00,SOL/USD,BUY,skipped,,,confidence 30 below minimum 65,,,,,,,,
 2026-09-24T18:01:05+00:00,DOGE/USD,BUY,skipped,,,confidence 62 below minimum 65,,,,,,,,
 2026-09-24T18:01:10+00:00,LINK/USD,BUY,executed,397.76,95.24257736724073,"4h avg ($12.8886) is 3.81% above 24h avg ($12.4156) - bullish crossover, price above the long-term trend filter",12.888628,12.41563,52bdc2cd-c2e5-45d2-8114-e11eaf641dff,c155d042,,,,
+2026-09-24T18:58:41+00:00,BTC/USD,BUY,skipped,,,confidence 8 below minimum 65,,,,,,,,
+2026-09-24T18:58:41+00:00,ETH/USD,BUY,skipped,,,confidence 9 below minimum 65,,,,,,,,
+2026-09-24T18:58:41+00:00,SOL/USD,BUY,skipped,,,confidence 42 below minimum 65,,,,,,,,
+2026-09-24T18:58:41+00:00,LINK/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-24T18:58:52+00:00,DOGE/USD,BUY,failed,15493.63,66.90044231987291,"4h avg ($0.0962) is 2.68% above 24h avg ($0.0937) - bullish crossover, price above the long-term trend filter | ERROR: {""available"":""156283.931738501"",""balance"":""156283.931738501"",""code"":40310000,""message"":""insufficient balance for DOGE (requested: 156628.514470337, available: 156283.931738501)"",""symbol"":""USD""}",0.09619,0.093683,,,,,,
