@@ -1,15 +1,4 @@
 {
-  "LINK/USD": {
-    "trade_id": "c155d042",
-    "symbol": "LINK/USD",
-    "qty": 30.169646617,
-    "entry_price": 12.93,
-    "stop_price": 10.6026,
-    "target_price": 13.964400000000001,
-    "stop_order_id": "52bdc2cd-c2e5-45d2-8114-e11eaf641dff",
-    "target_order_id": "1e17885b-354d-4de4-a5cc-5c623cd4fd0d",
-    "opened_at": "2026-09-24T18:01:05.412034+00:00"
-  },
   "DOGE/USD": {
     "trade_id": "e9d359d0",
     "symbol": "DOGE/USD",
