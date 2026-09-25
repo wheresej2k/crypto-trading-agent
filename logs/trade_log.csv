@@ -1456,3 +1456,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-25T06:00:44+00:00,SOL/USD,BUY,skipped,,,confidence 17 below minimum 65,,,,,,,,
 2026-09-25T06:00:44+00:00,LINK/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
 2026-09-25T06:00:44+00:00,DOGE/USD,BUY,skipped,,,confidence 6 below minimum 65,,,,,,,,
+2026-09-25T07:00:53+00:00,BTC/USD,BUY,skipped,,,confidence 1 below minimum 65,,,,,,,,
+2026-09-25T07:00:53+00:00,ETH/USD,BUY,skipped,,,confidence 3 below minimum 65,,,,,,,,
+2026-09-25T07:00:53+00:00,SOL/USD,BUY,skipped,,,confidence 12 below minimum 65,,,,,,,,
+2026-09-25T07:00:53+00:00,LINK/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-25T07:00:53+00:00,DOGE/USD,BUY,skipped,,,confidence 4 below minimum 65,,,,,,,,
