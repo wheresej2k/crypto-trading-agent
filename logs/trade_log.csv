@@ -1608,3 +1608,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-26T07:00:50+00:00,LINK/USD,BUY,skipped,,,confidence 22 below minimum 65,,,,,,,,
 2026-09-26T07:00:50+00:00,DOGE/USD,SELL,executed,160748.490333796,0.6852142769860678,"4h avg ($0.0977) is 0.03% below 24h avg ($0.0977) - bearish crossover, exiting position",,,e29efac7-cea5-4c08-90c9-a9ae1c14a9e7,,,,,
 2026-09-26T07:00:50+00:00,DOGE/USD,CLOSE,executed,,,,,,,e9d359d0,signal_exit,0.096647,0.097204,0.58
+2026-09-26T07:26:55+00:00,BTC/USD,HOLD,skipped,,,4h avg -0.14% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-26T07:26:55+00:00,ETH/USD,HOLD,skipped,,,4h avg -0.19% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-26T07:26:55+00:00,SOL/USD,HOLD,skipped,,,4h avg -0.18% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-26T07:26:55+00:00,LINK/USD,BUY,skipped,,,confidence 20 below minimum 65,,,,,,,,
+2026-09-26T07:26:55+00:00,DOGE/USD,HOLD,skipped,,,4h avg -0.21% vs 24h avg - no actionable signal,,,,,,,,
