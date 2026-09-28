@@ -1,13 +1,1 @@
-{
-  "LINK/USD": {
-    "trade_id": "1e8b2375",
-    "symbol": "LINK/USD",
-    "qty": 24.208624127,
-    "entry_price": 14.179206024,
-    "stop_price": 11.626948939680002,
-    "target_price": 15.313542505920003,
-    "stop_order_id": "53f779a2-52ba-48e0-86a5-ea3d7d0ad3cd",
-    "target_order_id": "7fe9c70f-4581-4b2d-938f-b04602adde6b",
-    "opened_at": "2026-09-28T15:15:15.123254+00:00"
-  }
-}
+{}
