@@ -63,7 +63,9 @@ jobs:
           fi
 
       - name: Text the daily summary image to phone
-        if: steps.check_hour.outputs.is_summary_time == 'true'
+        # Disabled 2026-09-28 at user's request - no more MMS summaries. Flip back to
+        # `steps.check_hour.outputs.is_summary_time == 'true'` to re-enable.
+        if: false
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
