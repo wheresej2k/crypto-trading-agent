@@ -1948,3 +1948,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-09-28T15:15:15+00:00,SOL/USD,HOLD,skipped,,,4h avg -1.12% vs 24h avg - no actionable signal,,,,,,,,
 2026-09-28T15:15:15+00:00,DOGE/USD,HOLD,skipped,,,4h avg -1.57% vs 24h avg - no actionable signal,,,,,,,,
 2026-09-28T15:15:20+00:00,LINK/USD,BUY,executed,349.65,75.13145499623894,"4h avg ($14.4562) is 3.01% above 24h avg ($14.0344) - bullish crossover, price above the long-term trend filter",14.4562,14.034429,53f779a2-52ba-48e0-86a5-ea3d7d0ad3cd,1e8b2375,,,,
+2026-09-28T16:00:54+00:00,BTC/USD,HOLD,skipped,,,4h avg -0.37% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-28T16:00:54+00:00,ETH/USD,BUY,skipped,,,confidence 10 below minimum 65,,,,,,,,
+2026-09-28T16:00:54+00:00,SOL/USD,HOLD,skipped,,,4h avg -0.98% vs 24h avg - no actionable signal,,,,,,,,
+2026-09-28T16:00:54+00:00,LINK/USD,BUY,skipped,,,already at max position size (15.0% of equity),,,,,,,,
+2026-09-28T16:00:54+00:00,DOGE/USD,HOLD,skipped,,,4h avg -1.35% vs 24h avg - no actionable signal,,,,,,,,
