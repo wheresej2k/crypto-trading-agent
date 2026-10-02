@@ -2464,3 +2464,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-10-02T07:00:45+00:00,LINK/USD,BUY,skipped,,,confidence 24 below minimum 65,,,,,,,,
 2026-10-02T07:00:45+00:00,DOGE/USD,BUY,skipped,,,confidence 31 below minimum 65,,,,,,,,
 2026-10-02T07:00:56+00:00,SOL/USD,BUY,failed,15635.55,70.0715235785657,"4h avg ($122.0531) is 2.80% above 24h avg ($118.7254) - bullish crossover, price above the long-term trend filter | ERROR: {""available"":""125.679924838"",""balance"":""125.679924838"",""code"":40310000,""message"":""insufficient balance for SOL (requested: 125.957030305, available: 125.679924838)"",""symbol"":""USD""}",122.053125,118.725417,,,,,,
+2026-10-02T08:00:55+00:00,BTC/USD,BUY,skipped,,,confidence 43 below minimum 65,,,,,,,,
+2026-10-02T08:00:55+00:00,ETH/USD,BUY,skipped,,,confidence 25 below minimum 65,,,,,,,,
+2026-10-02T08:00:55+00:00,LINK/USD,BUY,skipped,,,confidence 20 below minimum 65,,,,,,,,
+2026-10-02T08:00:55+00:00,DOGE/USD,BUY,skipped,,,confidence 39 below minimum 65,,,,,,,,
+2026-10-02T08:00:55+00:00,SOL/USD,BUY,executed,401.7,68.61741560443862,"4h avg ($122.1647) is 2.74% above 24h avg ($118.9013) - bullish crossover, price above the long-term trend filter",122.16475,118.901271,279dc9b7-b09a-4d3e-be41-7ccff88e444e,7b779283,,,,
