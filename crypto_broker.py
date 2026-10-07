@@ -135,9 +135,14 @@ class CryptoBroker:
         1-minute bars for a strategy that only acts once an hour (see README's data-granularity
         note). Fetches extra headroom then trims to exactly `hours` bars.
         """
-        start = datetime.now(timezone.utc) - timedelta(hours=hours * 2 + 24)
+        now = datetime.now(timezone.utc)
+        start = now - timedelta(hours=hours * 2 + 24)
         req = CryptoBarsRequest(symbol_or_symbols=symbol, timeframe=HOURLY, start=start)
-        raw_bars = list(self.data.get_crypto_bars(req)[symbol])[-hours:]
+        # Bars are stamped with their START, so the current hour's bar is still forming (at :05
+        # it holds 5 minutes of trades). Signals use finished hours only - the same bars the
+        # backtest sees.
+        finished = [b for b in self.data.get_crypto_bars(req)[symbol] if b.timestamp + timedelta(hours=1) <= now]
+        raw_bars = finished[-hours:]
         return [
             Bar(b.timestamp, float(b.open), float(b.high), float(b.low), float(b.close), float(b.volume))
             for b in raw_bars

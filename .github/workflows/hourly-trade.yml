@@ -17,6 +17,15 @@ on:
 permissions:
   contents: write
 
+# Two triggers fire this workflow (cron-job.org's hourly dispatch AND GitHub's own backup
+# schedule), and they do land minutes apart (e.g. 10:00:20 and 10:01:12 on 2026-10-06).
+# Overlapping runs read the same state/open_brackets.json, can both buy the same symbol, and
+# the second push is rejected - losing that run's bracket state. Queue them instead; never
+# cancel one mid-run (it could be between a buy filling and its take-profit being placed).
+concurrency:
+  group: hourly-trade
+  cancel-in-progress: false
+
 env:
   ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
   ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
@@ -29,7 +38,8 @@ env:
 
 jobs:
   trade:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to Ubuntu 26 from 2026-10-19 - upgrade deliberately, not by surprise.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -92,4 +102,10 @@ jobs:
             fi
           done
           git diff --cached --quiet || git commit -m "Update trade log and state [skip ci]"
-          git push
+          # Rebase onto anything pushed since checkout (a code change, the retune workflow) so
+          # this run's state isn't rejected and lost; retry in case of a race.
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep $((attempt * 10))
+          done
+          echo "Could not push trade log/state after 3 attempts" && exit 1

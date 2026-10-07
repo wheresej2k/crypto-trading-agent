@@ -38,6 +38,8 @@ class Bracket:
     # order any more - see open_bracket() for why.
     target_order_id: str
     opened_at: str
+    # Highest price seen at a run since entry - drives the optional trailing stop.
+    high_water: float = 0.0
 
 
 def load_brackets() -> dict[str, Bracket]:
@@ -56,6 +58,20 @@ def save_brackets(brackets: dict[str, Bracket]):
     STATE_PATH.parent.mkdir(exist_ok=True)
     with open(STATE_PATH, "w") as f:
         json.dump({symbol: asdict(b) for symbol, b in brackets.items()}, f, indent=2)
+
+
+def stop_level(entry_price: float, stop_price: float, high_water: float,
+               trailing_stop_pct: float, trail_activation_pct: float) -> tuple[float, str]:
+    """The price at/below which the position must be sold, and why. Shared by reconcile() and
+    backtest.simulate() so live and backtest apply the identical exit rule.
+
+    The trailing stop only arms once the high-water mark is trail_activation_pct above entry,
+    and never lowers the fixed stop."""
+    if trailing_stop_pct > 0 and high_water >= entry_price * (1 + trail_activation_pct / 100):
+        trail = high_water * (1 - trailing_stop_pct / 100)
+        if trail > stop_price:
+            return trail, "trailing_stop"
+    return stop_price, "stop_loss"
 
 
 def wait_for_fill(broker, order_id: str):
@@ -109,9 +125,11 @@ def open_bracket(broker, symbol: str, notional_usd: float, stop_loss_pct: float,
         qty=float(filled.filled_qty),
         entry_price=entry_price,
         stop_price=entry_price * (1 - stop_loss_pct / 100),
-        target_price=entry_price * (1 + take_profit_pct / 100),
+        # 0 = no take-profit (take_profit_pct set to 0).
+        target_price=entry_price * (1 + take_profit_pct / 100) if take_profit_pct > 0 else 0.0,
         target_order_id="",
         opened_at=filled.filled_at.isoformat() if filled.filled_at else "",
+        high_water=entry_price,
     )
     return bracket, place_target(broker, bracket)
 
@@ -121,6 +139,8 @@ def place_target(broker, b: Bracket) -> str | None:
     None on success or a warning string - never raises, so a filled position can't drop out of
     tracking the way it used to.
     """
+    if not b.target_price:
+        return None
     try:
         qty = broker.available_qty(b.symbol)
         if qty is None:
@@ -149,10 +169,11 @@ def _exit_now(broker, b: Bracket, price: float) -> float:
     return float(filled.filled_avg_price) if filled else price
 
 
-def reconcile(broker, brackets: dict[str, Bracket], price_of) -> tuple[dict[str, Bracket], list[dict]]:
+def reconcile(broker, brackets: dict[str, Bracket], price_of,
+              trailing_stop_pct: float = 0.0, trail_activation_pct: float = 0.0) -> tuple[dict[str, Bracket], list[dict]]:
     """Checks every tracked bracket against the exchange and the latest price (`price_of(symbol)`):
     - resting take-profit filled -> closed at the target;
-    - price at/below the stop -> cancel the take-profit and market-sell (the software stop-loss);
+    - price at/below the stop (fixed, or trailing - see stop_level) -> cancel the take-profit and market-sell (the software stop-loss);
     - take-profit missing (never placed, or canceled) -> enforce the target in software, and try
       placing it again.
     Returns the still-open brackets plus 'close events' - this is where the SELF-IMPROVING
@@ -170,15 +191,21 @@ def reconcile(broker, brackets: dict[str, Bracket], price_of) -> tuple[dict[str,
                 continue
             if target_status in ("canceled", "expired", "rejected"):
                 b.target_order_id = ""
+            if broker.available_qty(symbol) is None:
+                # Sold outside the bot (e.g. by hand on Alpaca's site) - nothing left to protect.
+                print(f"    WARNING: {symbol} bracket {b.trade_id} has no position on Alpaca any more - dropping it")
+                continue
 
             price = price_of(symbol)
-            if price <= b.stop_price:
-                close_events.append(build_close_event(b, "stop_loss", _exit_now(broker, b, price)))
+            b.high_water = max(b.high_water or b.entry_price, price)
+            level, reason = stop_level(b.entry_price, b.stop_price, b.high_water, trailing_stop_pct, trail_activation_pct)
+            if price <= level:
+                close_events.append(build_close_event(b, reason, _exit_now(broker, b, price)))
                 continue
-            if not b.target_order_id and price >= b.target_price:
+            if b.target_price and not b.target_order_id and price >= b.target_price:
                 close_events.append(build_close_event(b, "take_profit", _exit_now(broker, b, price)))
                 continue
-            if not b.target_order_id:
+            if b.target_price and not b.target_order_id:
                 warning = place_target(broker, b)
                 if warning:
                     print(f"    WARNING {symbol}: {warning}")
@@ -187,6 +214,48 @@ def reconcile(broker, brackets: dict[str, Bracket], price_of) -> tuple[dict[str,
         still_open[symbol] = b
 
     return still_open, close_events
+
+
+ADOPT_MIN_VALUE_USD = 10.0
+
+
+def adopt_untracked(broker, brackets: dict[str, Bracket], positions: dict, watchlist: list[str],
+                    stop_loss_pct: float, take_profit_pct: float) -> list[tuple[str, str]]:
+    """Any position Alpaca holds with no bracket gets one, priced from Alpaca's average entry.
+
+    The state file is not a reliable record of what the account holds - it has lost positions
+    before (2026-09-19: LINK and SOL held, untracked, with orphaned stop orders reserving half of
+    each), and a filled buy that errored afterwards used to drop out of tracking entirely. An
+    untracked position has no take-profit or stop, and the bot never adds to it. Adopting it every
+    run makes all of those self-healing. Leftover dust under ADOPT_MIN_VALUE_USD is ignored.
+    Returns (symbol, message) per position adopted or failed.
+    """
+    messages = []
+    for symbol, pos in positions.items():
+        if symbol in brackets or symbol not in watchlist or pos.market_value < ADOPT_MIN_VALUE_USD:
+            continue
+        try:
+            # Orphaned resting orders would reserve the qty the take-profit needs.
+            broker.cancel_open_orders_for(symbol)
+            entry = pos.avg_entry_price
+            b = Bracket(
+                trade_id=str(uuid.uuid4())[:8],
+                symbol=symbol,
+                qty=pos.qty,
+                entry_price=entry,
+                stop_price=entry * (1 - stop_loss_pct / 100),
+                target_price=entry * (1 + take_profit_pct / 100) if take_profit_pct > 0 else 0.0,
+                target_order_id="",
+                opened_at="",
+                high_water=entry,
+            )
+            warning = place_target(broker, b)
+            brackets[symbol] = b
+            messages.append((symbol, f"adopted untracked position (${pos.market_value:,.2f}, entry {entry})"
+                            + (f" - {warning}" if warning else "")))
+        except Exception as e:
+            messages.append((symbol, f"could not adopt untracked position: {e}"))
+    return messages
 
 
 def cancel_bracket(broker, brackets: dict[str, Bracket], symbol: str) -> tuple[dict[str, Bracket], Bracket | None]:

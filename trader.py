@@ -17,6 +17,7 @@ from config import load_settings
 from data_validator import validate
 from heartbeat import record_success
 from position_tracker import (
+    adopt_untracked,
     build_close_event,
     cancel_bracket,
     load_brackets,
@@ -46,10 +47,18 @@ def main():
     # --- Reconcile protective orders: did a stop-loss or take-profit fill since last run? ---
     brackets = load_brackets()
     if not args.dry_run:
-        brackets, close_events = reconcile(broker, brackets, broker.latest_price)
+        brackets, close_events = reconcile(
+            broker, brackets, broker.latest_price, settings.trailing_stop_pct, settings.trail_activation_pct
+        )
         for event in close_events:
             print(f"  CLOSED {event['symbol']:10s} {event['exit_reason']:12s} P/L {event['pl_pct']:+.2f}%")
             log_close_event(event)
+        # Re-read: anything reconcile just sold must not be seen as still held below.
+        positions = broker.get_positions()
+        for symbol, message in adopt_untracked(broker, brackets, positions, settings.watchlist,
+                                               settings.stop_loss_pct, settings.take_profit_pct):
+            print(f"  {symbol}: {message}")
+            log_row(symbol, "ADOPT", "failed" if message.startswith("could not") else "executed", reasoning=message)
         save_brackets(brackets)
     else:
         print("  (--dry-run: skipping bracket reconciliation, no orders touched)")

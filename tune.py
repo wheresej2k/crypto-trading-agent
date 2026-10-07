@@ -55,7 +55,7 @@ from pathlib import Path
 
 from alpaca.data.historical import CryptoHistoricalDataClient
 
-from backtest import fetch_all_bars, simulate
+from backtest import fetch_all_bars, last_hours, simulate
 from config import load_settings
 
 SHORT_WINDOWS = [3, 4, 6]             # hours - fine search centered on the current best (4)
@@ -126,7 +126,7 @@ def sweep(base_settings, data_client, bars_by_symbol=None):
         )
         window_returns, window_drawdowns, window_winrates, window_buyhold = {}, {}, {}, {}
         for label, hours in WINDOWS_TO_TEST:
-            trimmed_bars = {s: bars[-hours:] for s, bars in bars_by_symbol.items()}
+            trimmed_bars = last_hours(bars_by_symbol, hours)
             r = simulate(settings, trimmed_bars)
             window_returns[label] = r["total_return_pct"] if r else None
             window_drawdowns[label] = r["max_drawdown_pct"] if r else None

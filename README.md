@@ -220,6 +220,22 @@ python backtest.py --hours 43800   # ~5 years - close to the full history Alpaca
 It reports the strategy's return, a buy-and-hold comparison, the worst drawdown, trade count, and
 win rate.
 
+What the backtest models, and why (fixed 2026-10-06 - results before that date overstated the
+strategy badly):
+- **Fees**: Alpaca's 0.25% on market orders and 0.15% on the resting take-profit. At ~1,000 trades
+  over five years, leaving fees out roughly octupled the 5-year return.
+- **One shared clock**: symbols are lined up by timestamp, not by list position. Alpaca's SOL/USD
+  history has a ~14-month hole; stepping by list position paired SOL's 2021 prices with BTC's 2022
+  prices. A held position whose data goes quiet for over 24h is closed at its last price.
+- **The live exits**: the take-profit fills when a bar's high touches it; the stop-loss (and the
+  optional trailing stop - `trailing_stop_pct` / `trail_activation_pct` in params.json, off by
+  default) triggers on the hourly close, because live it's a software check once per run.
+- **The daily-loss limit** against equity at the start of the UTC day, like Alpaca's.
+
+A trailing stop was tested on 2026-10-06 (with/without the take-profit, 2-8% trails, 0-6%
+activation): on its own it lost money over ~5 years and failed the drawdown bar; added to the 8%
+take-profit it changed results by under a point. It stays off.
+
 `tune.py` sweeps combinations of the SMA windows, stop-loss/take-profit, and confidence threshold,
 and reports which performed best across the three windows described in "The goal, stated
 concretely" above - filtered first to combinations that pass that safety bar, same idea as the

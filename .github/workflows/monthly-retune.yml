@@ -16,7 +16,8 @@ env:
 
 jobs:
   retune:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to Ubuntu 26 from 2026-10-19 - upgrade deliberately, not by surprise.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 

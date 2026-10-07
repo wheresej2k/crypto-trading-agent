@@ -164,3 +164,61 @@ class StateFileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SelfHealingTests(unittest.TestCase):
+    def setUp(self):
+        position_tracker.FILL_POLL_DELAY_SECONDS = 0
+
+    def test_untracked_position_is_adopted_and_protected(self):
+        from crypto_broker import PositionSnapshot
+        from position_tracker import adopt_untracked
+
+        broker = FakeAlpaca(price=100.0)
+        broker.held = 150.0  # bought by an earlier run that lost track of it
+        brackets = {}
+        positions = {"SOL/USD": PositionSnapshot("SOL/USD", 150.0, 15000.0, 95.0, 5.3),
+                     "DOGE/USD": PositionSnapshot("DOGE/USD", 3.0, 0.30, 0.1, 0.0)}  # dust
+
+        messages = adopt_untracked(broker, brackets, positions, ["SOL/USD", "DOGE/USD"], 18, 8)
+
+        self.assertEqual(["SOL/USD"], list(brackets))
+        self.assertEqual("SOL/USD", messages[0][0])
+        b = brackets["SOL/USD"]
+        self.assertAlmostEqual(95.0 * 1.08, b.target_price)  # priced from Alpaca's avg entry
+        self.assertAlmostEqual(150.0, broker.orders[b.target_order_id].qty)
+
+    def test_bracket_for_a_position_sold_elsewhere_is_dropped(self):
+        broker = FakeAlpaca(price=100.0)
+        bracket, _ = open_bracket(broker, "SOL/USD", 15000, 18, 8)
+        broker.cancel_order(bracket.target_order_id)
+        broker.held = 0.0  # sold by hand on Alpaca's site
+
+        still_open, events = reconcile(broker, {"SOL/USD": bracket}, lambda s: 100.0)
+
+        self.assertEqual(({}, []), (still_open, events))
+
+
+class TrailingStopTests(unittest.TestCase):
+    def setUp(self):
+        position_tracker.FILL_POLL_DELAY_SECONDS = 0
+        self.broker = FakeAlpaca(price=100.0)
+        self.bracket, _ = open_bracket(self.broker, "SOL/USD", 15000, stop_loss_pct=18, take_profit_pct=0)
+
+    def step(self, price):
+        self.broker.price = price
+        return reconcile(self.broker, {"SOL/USD": self.bracket}, lambda s: price,
+                         trailing_stop_pct=3, trail_activation_pct=5)
+
+    def test_no_take_profit_order_when_take_profit_is_off(self):
+        self.assertEqual("", self.bracket.target_order_id)
+        self.assertEqual(0.0, self.bracket.target_price)
+        self.assertEqual([], self.step(150.0)[1])  # no software take-profit either
+
+    def test_trail_arms_after_activation_and_sells_on_pullback(self):
+        self.assertEqual([], self.step(104.0)[1])   # +4%: not armed, a 3% dip is fine
+        self.assertEqual([], self.step(101.0)[1])
+        self.assertEqual([], self.step(110.0)[1])   # +10%: armed, trail at 106.7
+        _, events = self.step(106.0)
+        self.assertEqual("trailing_stop", events[0]["exit_reason"])
+        self.assertAlmostEqual(0.0, self.broker.held)

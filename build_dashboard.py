@@ -16,7 +16,7 @@ Usage:
 """
 import csv
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from config import load_settings
@@ -262,6 +262,18 @@ def main():
     realized_table, total_realized_usd, closed_count, win_count = build_realized_trades_table(all_log_rows)
     win_rate = (win_count / closed_count * 100) if closed_count else None
 
+    # The two failure signatures behind every serious bug so far, which used to be visible only
+    # by reading logs/trade_log.csv: orders the exchange rejected, and positions held with no
+    # take-profit/stop tracking them.
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    failed_orders_7d = sum(
+        1 for r in all_log_rows
+        if r.get("status") == "failed" and r.get("action") in ("BUY", "SELL", "ADOPT")
+        and datetime.fromisoformat(r["timestamp_utc"]) >= week_ago
+    )
+    brackets = load_json(STATE_DIR / "open_brackets.json") or {}
+    unprotected = [s for s in positions if s not in brackets]
+
     hours_since = hours_since_last_success()
     hours_since_str = f"{hours_since:.1f}h ago" if hours_since is not None else "unknown"
 
@@ -351,6 +363,8 @@ def main():
       <div class="card"><div class="label">Today's P/L</div><div class="value {'pos' if day_pl_usd >= 0 else 'neg'}">{fmt_pct(day_pl_pct)}</div></div>
       <div class="card"><div class="label">All-time P/L</div><div class="value {'pos' if all_time_usd >= 0 else 'neg'}">{fmt_pct(all_time_pct)}</div></div>
       <div class="card"><div class="label">Open positions</div><div class="value">{len(positions)}</div></div>
+      <div class="card"><div class="label">Failed orders (7d)</div><div class="value {'neg' if failed_orders_7d else ''}">{failed_orders_7d}</div></div>
+      <div class="card"><div class="label">Unprotected positions</div><div class="value {'neg' if unprotected else ''}">{len(unprotected)}</div>{f'<div class="card-hint">{esc(", ".join(unprotected))}</div>' if unprotected else ''}</div>
       <div class="card clickable" id="card-completed-runs" role="button" tabindex="0">
         <div class="label">Completed runs</div>
         <div class="value">{last_success.get('run_count', 'n/a')}</div>

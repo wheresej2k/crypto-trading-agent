@@ -60,6 +60,11 @@ class Settings:
     max_total_exposure_pct: float
     max_daily_loss_pct: float
     max_trades_per_run: int
+    # Optional exits (0 = off). take_profit_pct may also be 0 (no take-profit).
+    # trailing_stop_pct: sell once the price falls this far below the highest price seen since
+    # entry. trail_activation_pct: the trail only arms once the position is up at least this much.
+    trailing_stop_pct: float = 0.0
+    trail_activation_pct: float = 0.0
 
 
 def load_params(path: Path = PARAMS_PATH) -> dict:
@@ -97,4 +102,6 @@ def load_settings(params_path: Path = PARAMS_PATH) -> Settings:
         max_total_exposure_pct=float(params["max_total_exposure_pct"]),
         max_daily_loss_pct=float(params["max_daily_loss_pct"]),
         max_trades_per_run=int(params["max_trades_per_run"]),
+        trailing_stop_pct=float(params.get("trailing_stop_pct", 0)),
+        trail_activation_pct=float(params.get("trail_activation_pct", 0)),
     )
