@@ -1,13 +1,15 @@
 {
-  "_comment": "Tunable strategy/risk knobs. NOT secret - committed to git on purpose so the monthly auto-retune workflow can propose changes here as a reviewable pull request diff. See README.md for what each field means. Validated by tune.py 2026-09-14 (729-combination fine grid search, refined around the prior 269/656-passing winner): 637 of 729 passed the safety filter (drawdown <=32%, win rate >=35% in every window); this combo had both the highest average return (+55.1% vs +51.8% for the prior winner) AND a smaller worst-case drawdown (-20.9% vs -26.3%) across the three test windows (~3mo/~1yr/~5yr).",
-  "short_sma_window": 4,
+  "_comment": "Tunable strategy/risk knobs. NOT secret - committed to git on purpose so the monthly auto-retune workflow can propose changes here as a reviewable pull request diff. See README.md for what each field means. Re-tuned 2026-10-07 on the CORRECTED backtest (timestamp-aligned symbols + Alpaca fees; the 2026-09-14 tune ran on a backtest that misaligned SOL's data by over a year and charged no fees, so its numbers were invalid). 729-combination grid, 538 passed the safety filter (drawdown <=32%, win rate >=35% in every window). This combo: avg +20.3% over ~3mo/~1yr/~5yr (+8.6%/+10.8%/+41.4%, worst drawdown -15.3%) vs +10.7% (+9.3%/+1.5%/+21.4%, -19.4%) for the previous 4h/8% settings; beat them in 4 of 5 calendar years 2022-2026. Caveat: results are sensitive to short_sma_window (4h +10.7%, 6h +20.3%, 8h +12.2%), so treat the margin as optimistic. trailing_stop_pct tested and left off.",
+  "short_sma_window": 6,
   "long_sma_window": 24,
   "trend_window": 360,
   "stop_loss_pct": 18,
-  "take_profit_pct": 8,
+  "take_profit_pct": 10,
   "min_confidence": 65,
   "max_position_pct": 15,
   "max_total_exposure_pct": 75,
   "max_daily_loss_pct": 5,
-  "max_trades_per_run": 3
+  "max_trades_per_run": 3,
+  "trailing_stop_pct": 0,
+  "trail_activation_pct": 0
 }
