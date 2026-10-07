@@ -98,11 +98,12 @@ a new BUY - it never blocks a SELL/exit.
   no successful run - low enough to catch roughly 2 consecutive missed runs, not just a sustained
   multi-hour outage. It runs on its own independent trigger, so it still works even if the main
   hourly workflow's own schedule is the thing that broke.
-- **The stop-loss/take-profit protection doesn't depend on the bot running at all.** Because
-  Alpaca has no crypto bracket orders, `position_tracker.py` places the stop-loss and take-profit
-  as two independent resting orders directly on Alpaca's exchange right after a buy fills. Those
-  orders execute continuously, 24/7, regardless of whether a scheduled run happens on time - an
-  open position stays protected even during an outage that delays the bot itself.
+- **The take-profit doesn't depend on the bot running; the stop-loss does.** Alpaca has no crypto
+  bracket or OCO orders, and it reserves each resting sell order's quantity - so a stop AND a
+  take-profit can't both cover the whole position. `position_tracker.py` places the take-profit as
+  one resting order for the whole position right after a buy fills (it catches a spike 24/7, even
+  between runs), and checks the stop-loss itself against the latest price on every hourly run. In
+  a fast crash, or during an outage that delays the bot, the stop can fill below its price.
 
 ### 3. WELL-DEFINED GOAL - see the section above
 Explicit, quantified, and enforced by `tune.py`'s safety filter before any parameter set is
@@ -139,7 +140,7 @@ filter as a manual `tune.py` run before it's even offered to you as a PR - there
 | | Stocks | Crypto (this project) |
 |---|---|---|
 | Market hours | Only trades 9:30am-4pm ET | Trades 24/7, no market-hours gate |
-| Bracket orders (stop-loss+take-profit) | Native, one order | **Not supported by Alpaca for crypto** - built manually as two independent resting orders (see `position_tracker.py`), reconciled every run |
+| Bracket orders (stop-loss+take-profit) | Native, one order | **Not supported by Alpaca for crypto** - built manually: a resting take-profit for the whole position plus a stop-loss checked every run (see `position_tracker.py`) |
 | Data granularity | Daily bars, run once/day | Hourly bars, run once/hour |
 | Backtest depth | ~3.4 years (stock data limit at setup time) | ~5 years (crypto data goes back to 2021-01-01) |
 | Missed-run detection | Not built (the gap this project fixes) | `heartbeat.py` + a separate watchdog workflow |
@@ -296,8 +297,8 @@ What *would* become public if you switch: the code itself, and the trade log/per
   conversation and decision about money you could fully afford to lose.
 - **The daily-loss limit is a circuit breaker, not a guarantee.** It stops *new* buys once the
   day's loss threshold is hit, but existing positions can still move against you between checks -
-  the resting stop-loss order attached to each position is what protects it individually, and
-  that keeps working even between runs since it lives on Alpaca's exchange, not in this code.
+  the per-position stop-loss is what protects each one individually, and it is only checked once
+  per hourly run (see the RELIABLE pillar above for why it can't rest on the exchange).
 - **A market buy that never fills is a real, rare edge case this project doesn't fully
   automate around.** `position_tracker.py` waits up to 30 seconds for a buy to fill before placing
   its protective orders; if it somehow never fills in that window (essentially never happens for a

@@ -8,20 +8,20 @@ bot's alpaca_broker.py with symbols swapped):
 - Crypto market data needs no API keys at all (Alpaca publishes it openly) - only the trading
   calls (account, positions, orders) need authentication.
 - No native bracket orders for crypto - Alpaca's API rejects OrderClass.BRACKET for crypto pairs
-  (confirmed against their docs). Stop-loss and take-profit are placed as two independent
-  resting GTC orders instead, tracked and reconciled by position_tracker.py.
+  (confirmed against their docs), and no OCO either. A resting take-profit plus a per-run
+  software stop-loss are used instead, tracked and reconciled by position_tracker.py.
 """
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from alpaca.data.historical import CryptoHistoricalDataClient
-from alpaca.data.requests import CryptoBarsRequest
+from alpaca.data.requests import CryptoBarsRequest, CryptoLatestTradeRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
 from alpaca.trading.enums import QueryOrderStatus
 from alpaca.trading.requests import GetOrdersRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
-from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest, StopLimitOrderRequest
+from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest
 
 from retry import retry
 
@@ -144,6 +144,13 @@ class CryptoBroker:
         ]
 
     @retry(times=3, base_delay=2.0)
+    def latest_price(self, symbol: str) -> float:
+        """Most recent trade price - for the per-run software stop-loss check, where the last
+        hourly bar's close could be up to an hour stale."""
+        req = CryptoLatestTradeRequest(symbol_or_symbols=symbol)
+        return float(self.data.get_crypto_latest_trade(req)[symbol].price)
+
+    @retry(times=3, base_delay=2.0)
     def buy_notional(self, symbol: str, notional_usd: float):
         """Simple market buy - no bracket (crypto doesn't support OrderClass.BRACKET). The
         protective stop-loss/take-profit orders are placed separately, after this fills, by
@@ -202,23 +209,6 @@ class CryptoBroker:
                 continue
             return str(getattr(p, "qty_available", None) or p.qty)
         return None
-
-    @retry(times=3, base_delay=2.0)
-    def place_stop_loss(self, symbol: str, qty: float, stop_price: float, client_order_id: str):
-        # Limit price set 1.5% below the stop trigger as slippage tolerance - a crypto market can
-        # gap fast; without a floor, a stop-limit sell could sit unfilled below a crash instead
-        # of protecting the position.
-        limit_price = round(stop_price * 0.985, 6)
-        order = StopLimitOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=OrderSide.SELL,
-            time_in_force=TimeInForce.GTC,
-            stop_price=round(stop_price, 6),
-            limit_price=limit_price,
-            client_order_id=client_order_id,
-        )
-        return self.trading.submit_order(order)
 
     @retry(times=3, base_delay=2.0)
     def place_take_profit(self, symbol: str, qty: float, limit_price: float, client_order_id: str):

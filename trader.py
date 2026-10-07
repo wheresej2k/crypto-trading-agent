@@ -46,7 +46,7 @@ def main():
     # --- Reconcile protective orders: did a stop-loss or take-profit fill since last run? ---
     brackets = load_brackets()
     if not args.dry_run:
-        brackets, close_events = reconcile(broker, brackets)
+        brackets, close_events = reconcile(broker, brackets, broker.latest_price)
         for event in close_events:
             print(f"  CLOSED {event['symbol']:10s} {event['exit_reason']:12s} P/L {event['pl_pct']:+.2f}%")
             log_close_event(event)
@@ -147,16 +147,22 @@ def main():
                     reasoning=buy.reasoning, short_sma=round(d.short_sma, 6), long_sma=round(d.long_sma, 6))
             continue
         try:
-            bracket, error = open_bracket(broker, buy.symbol, buy.notional_usd, settings.stop_loss_pct, settings.take_profit_pct)
-            if error:
-                print(f"    WARNING: {error}")
+            bracket, note = open_bracket(broker, buy.symbol, buy.notional_usd, settings.stop_loss_pct, settings.take_profit_pct)
+            if bracket is None:
+                print(f"    WARNING: {note}")
                 log_row(buy.symbol, "BUY", "failed", amount=buy.notional_usd, confidence=buy.confidence,
-                        reasoning=f"{buy.reasoning} | {error}", short_sma=round(d.short_sma, 6), long_sma=round(d.long_sma, 6))
+                        reasoning=f"{buy.reasoning} | {note}", short_sma=round(d.short_sma, 6), long_sma=round(d.long_sma, 6))
                 continue
+            # The buy filled, so it is tracked even if its take-profit couldn't be placed yet
+            # (reconcile() retries it). Filled buys logged as "failed" is how positions used to end
+            # up unprotected, untracked, and topped up with a tiny second buy.
+            if note:
+                print(f"    WARNING: {note}")
             brackets[buy.symbol] = bracket
             log_row(buy.symbol, "BUY", "executed", amount=buy.notional_usd, confidence=buy.confidence,
-                    reasoning=buy.reasoning, short_sma=round(d.short_sma, 6), long_sma=round(d.long_sma, 6),
-                    trade_id=bracket.trade_id, order_id=bracket.stop_order_id)
+                    reasoning=f"{buy.reasoning} | {note}" if note else buy.reasoning,
+                    short_sma=round(d.short_sma, 6), long_sma=round(d.long_sma, 6),
+                    trade_id=bracket.trade_id, order_id=bracket.target_order_id)
             trades_executed += 1
         except Exception as e:
             print(f"    ORDER FAILED: {e}")

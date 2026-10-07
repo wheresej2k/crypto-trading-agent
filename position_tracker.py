@@ -1,17 +1,17 @@
 """RELIABLE + SELF-IMPROVING pillars: the crypto-specific 'software bracket'. Alpaca doesn't
 support bracket orders for crypto (confirmed against their docs - see crypto_broker.py), so this
-module builds the same protection out of two independent resting GTC orders - a stop-limit sell
-and a limit sell - placed right after a buy fills, and reconciles them on every run: if one
-fills, the other (now meaningless) is canceled.
+module builds the same protection itself: a resting GTC take-profit limit sell for the whole
+position, placed right after a buy fills, plus a stop-loss the bot enforces on every run. Two
+resting orders can't both cover the full position - Alpaca reserves each sell order's qty and has
+no OCO for crypto (see open_bracket()).
 
 State survives between GitHub Actions runs (each run is a fresh, disposable machine) by
 persisting to state/open_brackets.json, which the workflow commits back to the repo after every
 run - the same pattern the trade log itself uses.
 
-Because these are resting orders sitting on Alpaca's own exchange, they protect an open position
-continuously, 24/7, even between scheduled runs - the bot doesn't need to be running for a
-stop-loss to trigger. Run frequency mainly affects how fast new entries are caught, not how
-protected existing positions are.
+Because the take-profit rests on Alpaca's own exchange, it catches a spike 24/7, even between
+scheduled runs. The stop-loss is only checked once per run (hourly), so in a fast crash it can
+fill below the stop price - it is NOT continuous protection.
 """
 import json
 import time
@@ -33,7 +33,9 @@ class Bracket:
     entry_price: float
     stop_price: float
     target_price: float
-    stop_order_id: str
+    # The resting take-profit limit sell on Alpaca, or "" if it couldn't be placed (reconcile()
+    # retries it, and enforces the target in software until then). There is no resting stop
+    # order any more - see open_bracket() for why.
     target_order_id: str
     opened_at: str
 
@@ -43,7 +45,11 @@ def load_brackets() -> dict[str, Bracket]:
         return {}
     with open(STATE_PATH) as f:
         raw = json.load(f)
-    return {symbol: Bracket(**b) for symbol, b in raw.items()}
+    # Older state files carry a stop_order_id from the two-resting-orders design.
+    return {
+        symbol: Bracket(**{k: v for k, v in b.items() if k != "stop_order_id"})
+        for symbol, b in raw.items()
+    }
 
 
 def save_brackets(brackets: dict[str, Bracket]):
@@ -67,11 +73,24 @@ def wait_for_fill(broker, order_id: str):
 
 
 def open_bracket(broker, symbol: str, notional_usd: float, stop_loss_pct: float, take_profit_pct: float):
-    """Places the market buy, waits for it to fill, then places the two protective resting
-    orders. Returns (Bracket, None) on success, or (None, error_string) on failure - e.g. the buy
-    never filled in the poll window. That's logged clearly rather than silently dropped; the
-    order itself is left open on Alpaca and would need a manual look if it ever actually happens
-    (see README).
+    """Places the market buy, waits for it to fill, then places the resting take-profit.
+
+    Returns (Bracket, warning_or_None) once the buy has filled - a filled buy is ALWAYS returned
+    as a tracked bracket, even if the protective order couldn't be placed, because it's a real
+    position. Returns (None, error_string) only if the buy never filled in the poll window (the
+    order is then left open on Alpaca and needs a manual look - see README).
+
+    Only ONE resting order is placed, covering the whole position. Alpaca reserves each sell
+    order's qty against the balance and has no OCO for crypto, so a stop AND a target can't both
+    cover the full position - the second is rejected "insufficient balance". The take-profit is
+    the one that rests on the exchange (a spike can come and go between hourly runs); the
+    stop-loss is enforced by reconcile() on every run.
+
+    The qty is Alpaca's own qty_available, not filled_qty: Alpaca takes its fee out of the coin,
+    so filled_qty is ~0.25% MORE than is actually held and an order for it is rejected. That
+    rejection used to be raised out of here AFTER the buy had filled - the trade was logged as a
+    failed BUY, left unprotected and untracked, and the next run "bought" the few hundred dollars
+    of headroom left under max_position_pct. Only that ~2% sliver ever got a take-profit.
     """
     order = broker.buy_notional(symbol, notional_usd)
     filled = wait_for_fill(broker, order.id)
@@ -84,58 +103,88 @@ def open_bracket(broker, symbol: str, notional_usd: float, stop_loss_pct: float,
         )
 
     entry_price = float(filled.filled_avg_price)
-    qty = float(filled.filled_qty)
-    trade_id = str(uuid.uuid4())[:8]
-
-    stop_price = entry_price * (1 - stop_loss_pct / 100)
-    target_price = entry_price * (1 + take_profit_pct / 100)
-
-    stop_order = broker.place_stop_loss(symbol, qty, stop_price, client_order_id=f"stop-{trade_id}")
-    target_order = broker.place_take_profit(symbol, qty, target_price, client_order_id=f"target-{trade_id}")
-
     bracket = Bracket(
-        trade_id=trade_id,
+        trade_id=str(uuid.uuid4())[:8],
         symbol=symbol,
-        qty=qty,
+        qty=float(filled.filled_qty),
         entry_price=entry_price,
-        stop_price=stop_price,
-        target_price=target_price,
-        stop_order_id=str(stop_order.id),
-        target_order_id=str(target_order.id),
+        stop_price=entry_price * (1 - stop_loss_pct / 100),
+        target_price=entry_price * (1 + take_profit_pct / 100),
+        target_order_id="",
         opened_at=filled.filled_at.isoformat() if filled.filled_at else "",
     )
-    return bracket, None
+    return bracket, place_target(broker, bracket)
 
 
-def reconcile(broker, brackets: dict[str, Bracket]) -> tuple[dict[str, Bracket], list[dict]]:
-    """Checks every tracked bracket: if the stop or target order has filled, cancels the sibling
-    order and drops the bracket from tracking. Returns the still-open brackets plus a list of
-    'close events' - this is where the SELF-IMPROVING pillar's 'what happened after' gets
-    captured for a trade that already entered, feeding trade_log.py's full-lifecycle record.
+def place_target(broker, b: Bracket) -> str | None:
+    """Places the resting take-profit for everything Alpaca says is available to sell. Returns
+    None on success or a warning string - never raises, so a filled position can't drop out of
+    tracking the way it used to.
+    """
+    try:
+        qty = broker.available_qty(b.symbol)
+        if qty is None:
+            return "position not visible on Alpaca yet - take-profit will be placed next run"
+        # Suffix keeps client_order_id unique when a canceled target is re-placed.
+        client_id = f"target-{b.trade_id}-{uuid.uuid4().hex[:4]}"
+        order = broker.place_take_profit(b.symbol, qty, b.target_price, client_order_id=client_id)
+        b.target_order_id = str(order.id)
+        b.qty = float(qty)
+        return None
+    except Exception as e:
+        return f"take-profit not placed ({e}) - retrying next run, target enforced in software until then"
+
+
+def _exit_now(broker, b: Bracket, price: float) -> float:
+    """Market-sells the whole position. Returns the fill price, or `price` if the fill wasn't
+    confirmed inside the poll window."""
+    if b.target_order_id:
+        broker.cancel_order(b.target_order_id)
+    broker.cancel_open_orders_for(b.symbol)
+    qty = broker.available_qty(b.symbol)
+    if qty is None:
+        raise RuntimeError(f"no {b.symbol} position on Alpaca to sell")
+    order = broker.sell_qty(b.symbol, qty)
+    filled = wait_for_fill(broker, order.id)
+    return float(filled.filled_avg_price) if filled else price
+
+
+def reconcile(broker, brackets: dict[str, Bracket], price_of) -> tuple[dict[str, Bracket], list[dict]]:
+    """Checks every tracked bracket against the exchange and the latest price (`price_of(symbol)`):
+    - resting take-profit filled -> closed at the target;
+    - price at/below the stop -> cancel the take-profit and market-sell (the software stop-loss);
+    - take-profit missing (never placed, or canceled) -> enforce the target in software, and try
+      placing it again.
+    Returns the still-open brackets plus 'close events' - this is where the SELF-IMPROVING
+    pillar's 'what happened after' gets captured, feeding trade_log.py's full-lifecycle record.
+    A failure on one bracket is printed and that bracket kept; it never stops the run.
     """
     still_open = {}
     close_events = []
 
     for symbol, b in brackets.items():
-        stop_status = broker.get_order(b.stop_order_id).status.value
-        target_status = broker.get_order(b.target_order_id).status.value
+        try:
+            target_status = broker.get_order(b.target_order_id).status.value if b.target_order_id else None
+            if target_status == "filled":
+                close_events.append(build_close_event(b, "take_profit", b.target_price))
+                continue
+            if target_status in ("canceled", "expired", "rejected"):
+                b.target_order_id = ""
 
-        if stop_status == "filled":
-            broker.cancel_order(b.target_order_id)
-            pl_pct = (b.stop_price - b.entry_price) / b.entry_price * 100
-            close_events.append({
-                "symbol": symbol, "trade_id": b.trade_id, "exit_reason": "stop_loss",
-                "entry_price": b.entry_price, "exit_price": b.stop_price, "pl_pct": pl_pct,
-            })
-        elif target_status == "filled":
-            broker.cancel_order(b.stop_order_id)
-            pl_pct = (b.target_price - b.entry_price) / b.entry_price * 100
-            close_events.append({
-                "symbol": symbol, "trade_id": b.trade_id, "exit_reason": "take_profit",
-                "entry_price": b.entry_price, "exit_price": b.target_price, "pl_pct": pl_pct,
-            })
-        else:
-            still_open[symbol] = b
+            price = price_of(symbol)
+            if price <= b.stop_price:
+                close_events.append(build_close_event(b, "stop_loss", _exit_now(broker, b, price)))
+                continue
+            if not b.target_order_id and price >= b.target_price:
+                close_events.append(build_close_event(b, "take_profit", _exit_now(broker, b, price)))
+                continue
+            if not b.target_order_id:
+                warning = place_target(broker, b)
+                if warning:
+                    print(f"    WARNING {symbol}: {warning}")
+        except Exception as e:
+            print(f"    WARNING: could not reconcile {symbol}: {e}")
+        still_open[symbol] = b
 
     return still_open, close_events
 
@@ -154,8 +203,8 @@ def cancel_bracket(broker, brackets: dict[str, Bracket], symbol: str) -> tuple[d
     if b is None:
         return brackets, None
 
-    broker.cancel_order(b.stop_order_id)
-    broker.cancel_order(b.target_order_id)
+    if b.target_order_id:
+        broker.cancel_order(b.target_order_id)
 
     remaining = {s: br for s, br in brackets.items() if s != symbol}
     return remaining, b
