@@ -5260,3 +5260,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-10-21T22:00:43+00:00,SOL/USD,BUY,skipped,,,confidence 29 below minimum 65,,,,,,,,
 2026-10-21T22:00:43+00:00,LINK/USD,BUY,skipped,,,confidence 44 below minimum 65,,,,,,,,
 2026-10-21T22:00:43+00:00,DOGE/USD,HOLD,skipped,,,"6h avg is 0.93% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-10-21T22:14:03+00:00,BTC/USD,BUY,skipped,,,confidence 30 below minimum 65,,,,,,,,
+2026-10-21T22:14:03+00:00,ETH/USD,BUY,skipped,,,confidence 32 below minimum 65,,,,,,,,
+2026-10-21T22:14:03+00:00,SOL/USD,BUY,skipped,,,confidence 29 below minimum 65,,,,,,,,
+2026-10-21T22:14:03+00:00,LINK/USD,BUY,skipped,,,confidence 44 below minimum 65,,,,,,,,
+2026-10-21T22:14:03+00:00,DOGE/USD,HOLD,skipped,,,"6h avg is 0.93% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
