@@ -5985,3 +5985,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-10-26T19:00:54+00:00,SOL/USD,HOLD,skipped,,,"6h avg is 0.04% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
 2026-10-26T19:00:54+00:00,LINK/USD,HOLD,skipped,,,"6h avg is 0.26% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
 2026-10-26T19:00:54+00:00,DOGE/USD,HOLD,skipped,,,"6h avg is 0.44% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-10-26T20:01:09+00:00,BTC/USD,HOLD,skipped,,,"6h avg is 0.07% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-10-26T20:01:09+00:00,ETH/USD,HOLD,skipped,,,6h avg -0.09% vs 24h avg - no actionable signal,,,,,,,,
+2026-10-26T20:01:09+00:00,SOL/USD,HOLD,skipped,,,"6h avg is 0.03% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-10-26T20:01:09+00:00,LINK/USD,HOLD,skipped,,,"6h avg is 0.28% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-10-26T20:01:09+00:00,DOGE/USD,HOLD,skipped,,,"6h avg is 0.53% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
