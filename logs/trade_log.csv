@@ -7235,3 +7235,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-11-04T17:00:44+00:00,SOL/USD,HOLD,skipped,,,"6h avg is 1.44% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
 2026-11-04T17:00:44+00:00,LINK/USD,BUY,skipped,,,confidence 57 below minimum 65,,,,,,,,
 2026-11-04T17:00:44+00:00,DOGE/USD,BUY,skipped,,,confidence 31 below minimum 65,,,,,,,,
+2026-11-04T18:01:08+00:00,BTC/USD,BUY,skipped,,,confidence 45 below minimum 65,,,,,,,,
+2026-11-04T18:01:08+00:00,SOL/USD,HOLD,skipped,,,"6h avg is 1.72% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-11-04T18:01:08+00:00,LINK/USD,HOLD,skipped,,,"6h avg is 2.68% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-11-04T18:01:08+00:00,DOGE/USD,HOLD,skipped,,,"6h avg is 1.47% above 24h avg (bullish crossover), but price is below the long-term trend filter - sitting out a confirmed downtrend",,,,,,,,
+2026-11-04T18:01:13+00:00,ETH/USD,BUY,executed,15582.42,74.95328324596613,"6h avg ($2380.6446) is 3.00% above 24h avg ($2311.3474) - bullish crossover, price above the long-term trend filter",2380.644583,2311.347354,d03cb3f2-a7a2-477e-afb1-94573d58c944,c94c38c8,,,,
