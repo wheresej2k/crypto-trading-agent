@@ -8642,3 +8642,8 @@ timestamp_utc,symbol,action,status,amount,confidence,reasoning,short_sma,long_sm
 2026-11-14T23:00:46+00:00,SOL/USD,HOLD,skipped,,,6h avg -4.49% vs 24h avg - no actionable signal,,,,,,,,
 2026-11-14T23:00:46+00:00,LINK/USD,HOLD,skipped,,,6h avg -5.11% vs 24h avg - no actionable signal,,,,,,,,
 2026-11-14T23:00:46+00:00,DOGE/USD,HOLD,skipped,,,6h avg -5.24% vs 24h avg - no actionable signal,,,,,,,,
+2026-11-15T00:00:41+00:00,BTC/USD,HOLD,skipped,,,6h avg -2.56% vs 24h avg - no actionable signal,,,,,,,,
+2026-11-15T00:00:41+00:00,ETH/USD,HOLD,skipped,,,6h avg -4.10% vs 24h avg - no actionable signal,,,,,,,,
+2026-11-15T00:00:41+00:00,SOL/USD,HOLD,skipped,,,6h avg -4.66% vs 24h avg - no actionable signal,,,,,,,,
+2026-11-15T00:00:41+00:00,LINK/USD,HOLD,skipped,,,6h avg -5.21% vs 24h avg - no actionable signal,,,,,,,,
+2026-11-15T00:00:41+00:00,DOGE/USD,HOLD,skipped,,,6h avg -5.60% vs 24h avg - no actionable signal,,,,,,,,
