@@ -1,13 +1,1 @@
-{
-  "SOL/USD": {
-    "trade_id": "0194c303",
-    "symbol": "SOL/USD",
-    "qty": 198.511581794,
-    "entry_price": 76.697089756,
-    "stop_price": 62.89161359992,
-    "target_price": 84.3667987316,
-    "target_order_id": "453d79e0-789c-46bd-b135-277e16e1231d",
-    "opened_at": "2026-11-23T15:01:17.784963+00:00",
-    "high_water": 76.697089756
-  }
-}
+{}
